@@ -1,5 +1,5 @@
 import { supabase } from './supabase';
-import { FridgeItem } from '@/types';
+import { FridgeItem, Status } from '@/types';
 
 interface CreateFridgeItem {
   name: string;
@@ -10,6 +10,9 @@ interface CreateFridgeItem {
   purchase_date?: string | null;
   store_name?: string | null;
   expiry_date?: string | null;
+  status?: Status;
+  avg_days_per_unit?: number | null;
+  total_consumed?: number;
 }
 
 interface UpdateFridgeItem extends Partial<CreateFridgeItem> {}
@@ -39,6 +42,9 @@ export const fridgeService = {
         purchase_date: item.purchase_date || null,
         store_name: item.store_name || null,
         expiry_date: item.expiry_date || null,
+        status: item.status ?? 'available',
+        avg_days_per_unit: item.avg_days_per_unit ?? null,
+        total_consumed: item.total_consumed ?? 0,
       })
       .select()
       .single();
@@ -56,6 +62,17 @@ export const fridgeService = {
       .single();
 
     if (error) throw error;
+    return data;
+  },
+
+  async getById(id: string): Promise<FridgeItem | null> {
+    const { data, error } = await supabase
+      .from('fridge_items')
+      .select('*')
+      .eq('id', id)
+      .single();
+
+    if (error) return null;
     return data;
   },
 

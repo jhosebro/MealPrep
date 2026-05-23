@@ -2,18 +2,26 @@ import { Colors } from "@/constants/theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useAuthStore } from "@/stores/authStore";
 import { useFridgeStore } from "@/stores/fridgeStore";
-import { FridgeItem } from "@/types";
-import { useRouter } from "expo-router";
-import { useEffect, useState } from "react";
+import { CATEGORIES, FridgeItem, Status } from "@/types";
+import { useFocusEffect, useRouter } from "expo-router";
+import { useCallback, useMemo, useState } from "react";
 import {
   Alert,
-  FlatList,
   RefreshControl,
+  ScrollView,
+  SectionList,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+
+const statusColor: Record<Status, string> = {
+  available: "#4CAF50",
+  low: "#FFA500",
+  empty: "#FF4444",
+};
 
 export default function FridgeScreen() {
   const router = useRouter();
@@ -22,12 +30,35 @@ export default function FridgeScreen() {
   const { user } = useAuthStore();
   const { items, fetchItems, deleteItem } = useFridgeStore();
   const [refreshing, setRefreshing] = useState(false);
+  const [selectedCat, setSelectedCat] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (user) {
-      fetchItems(user.id);
-    }
-  }, [user]);
+  const sections = useMemo(() => {
+    return CATEGORIES.map((cat) => ({
+      title: cat,
+      data: items.filter((i) => i.category === cat),
+    })).filter((s) => s.data.length > 0);
+  }, [items]);
+
+  const filteredSections = useMemo(() => {
+    if (!selectedCat) return sections;
+    return sections.filter((s) => s.title === selectedCat);
+  }, [sections, selectedCat]);
+
+  const catTabItems = useMemo(() => {
+    const counts = new Map<string, number>();
+    items.forEach((i) => {
+      counts.set(i.category, (counts.get(i.category) || 0) + 1);
+    });
+    return counts;
+  }, [items]);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (user) {
+        fetchItems(user.id);
+      }
+    }, [user]),
+  );
 
   const onRefresh = async () => {
     if (!user) return;
@@ -49,13 +80,19 @@ export default function FridgeScreen() {
       onPress={() => router.push(`/fridge/${item.id}` as any)}
       onLongPress={() => handleDelete(item.id, item.name)}
     >
+      <View style={[styles.statusDot, { backgroundColor: statusColor[item.status] }]} />
       <View style={styles.itemContent}>
         <Text style={[styles.itemName, { color: colors.text }]}>
           {item.name}
         </Text>
         <Text style={[styles.itemDetails, { color: colors.textSecondary }]}>
-          {item.quantity} {item.unit} · {item.category}
+          {item.quantity} {item.unit}
         </Text>
+        {item.avg_days_per_unit != null && item.status !== "empty" && (
+          <Text style={[styles.itemEstimate, { color: colors.textSecondary }]}>
+            ~{Math.round(item.avg_days_per_unit * item.quantity)} días
+          </Text>
+        )}
       </View>
       <Text style={[styles.chevron, { color: colors.textSecondary }]}>›</Text>
     </TouchableOpacity>
@@ -72,8 +109,8 @@ export default function FridgeScreen() {
     </View>
   );
 
-  return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
+  const headerComponent = (
+    <>
       <View style={styles.header}>
         <Text style={[styles.title, { color: colors.text }]}>Mi Despensa</Text>
         <TouchableOpacity
@@ -84,24 +121,99 @@ export default function FridgeScreen() {
         </TouchableOpacity>
       </View>
 
-      <FlatList
-        data={items}
+      {items.length > 0 && (
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={styles.tabBar}
+          contentContainerStyle={styles.tabBarContent}
+        >
+          <TouchableOpacity
+            style={[
+              styles.tab,
+              { backgroundColor: colors.card },
+              !selectedCat && { backgroundColor: colors.primary },
+            ]}
+            onPress={() => setSelectedCat(null)}
+          >
+            <Text
+              style={[
+                styles.tabText,
+                { color: colors.text },
+                !selectedCat && { color: "#fff" },
+              ]}
+            >
+              Todas
+            </Text>
+          </TouchableOpacity>
+          {CATEGORIES.map((cat) => {
+            const count = catTabItems.get(cat);
+            if (!count) return null;
+            return (
+              <TouchableOpacity
+                key={cat}
+                style={[
+                  styles.tab,
+                  { backgroundColor: colors.card },
+                  selectedCat === cat && { backgroundColor: colors.primary },
+                ]}
+                onPress={() => setSelectedCat(cat)}
+              >
+                <Text
+                  style={[
+                    styles.tabText,
+                    { color: colors.text },
+                    selectedCat === cat && { color: "#fff" },
+                  ]}
+                >
+                  {cat}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
+      )}
+
+      {items.length > 0 && filteredSections.length === 0 && (
+        <View style={styles.emptyCategory}>
+          <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
+            No hay items en esta categoría
+          </Text>
+        </View>
+      )}
+    </>
+  );
+
+  return (
+    <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]}>
+      <SectionList
+        sections={filteredSections}
         keyExtractor={(item) => item.id}
         renderItem={renderItem}
-        ListEmptyComponent={renderEmpty}
-        contentContainerStyle={
-          items.length === 0 ? styles.emptyList : styles.list
-        }
+        renderSectionHeader={({ section }) => (
+          <View style={styles.sectionHeader}>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>
+              {section.title.toUpperCase()}
+            </Text>
+            <Text style={[styles.sectionCount, { color: colors.textSecondary }]}>
+              {section.data.length}
+            </Text>
+          </View>
+        )}
+        ListHeaderComponent={items.length > 0 ? headerComponent : null}
+        ListEmptyComponent={items.length === 0 ? renderEmpty : undefined}
+        contentContainerStyle={styles.list}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
+        showsVerticalScrollIndicator={false}
       />
-    </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  safe: {
     flex: 1,
   },
   header: {
@@ -109,7 +221,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     paddingHorizontal: 16,
-    paddingTop: 60,
+    paddingTop: 8,
     paddingBottom: 16,
   },
   title: {
@@ -129,11 +241,8 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
   },
   list: {
-    paddingHorizontal: 16,
     paddingBottom: 100,
-  },
-  emptyList: {
-    flex: 1,
+    flexGrow: 1,
   },
   itemCard: {
     flexDirection: "row",
@@ -141,6 +250,52 @@ const styles = StyleSheet.create({
     padding: 16,
     borderRadius: 12,
     marginBottom: 8,
+    marginHorizontal: 16,
+  },
+  statusDot: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    marginRight: 12,
+  },
+  tabBar: {
+    marginBottom: 4,
+  },
+  tabBarContent: {
+    paddingHorizontal: 16,
+    gap: 8,
+    alignItems: "center",
+    justifyContent: "center",
+    minHeight: 46,
+  },
+  tab: {
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    justifyContent: "center",
+    borderRadius: 20,
+    minWidth: 64,
+    alignItems: "center",
+  },
+  tabText: {
+    fontSize: 14,
+    textTransform: "capitalize",
+  },
+  sectionHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: 8,
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: "700",
+    letterSpacing: 1,
+  },
+  sectionCount: {
+    fontSize: 14,
+    fontWeight: "500",
   },
   itemContent: {
     flex: 1,
@@ -153,6 +308,11 @@ const styles = StyleSheet.create({
     fontSize: 14,
     marginTop: 4,
   },
+  itemEstimate: {
+    fontSize: 13,
+    marginTop: 2,
+    fontWeight: "500",
+  },
   chevron: {
     fontSize: 24,
   },
@@ -160,6 +320,10 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
+  },
+  emptyCategory: {
+    alignItems: "center",
+    paddingTop: 40,
   },
   emptyText: {
     fontSize: 18,

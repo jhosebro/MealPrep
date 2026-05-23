@@ -2,7 +2,10 @@ import { Colors } from "@/constants/theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useAuthStore } from "@/stores/authStore";
 import { useFridgeStore } from "@/stores/fridgeStore";
-import { CATEGORIES, STORES, UNITS } from "@/types";
+import { CATEGORIES, Status, STORES, UNITS } from "@/types";
+import DateTimePicker, {
+  DateTimePickerChangeEvent,
+} from "@react-native-community/datetimepicker";
 import { useRouter } from "expo-router";
 import { useState } from "react";
 import {
@@ -15,7 +18,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import DateTimePicker, { DateTimePickerEvent } from "@react-native-community/datetimepicker";
+import CurrencyInput from "react-native-currency-input";
 
 export default function AddItemScreen() {
   const router = useRouter();
@@ -33,23 +36,34 @@ export default function AddItemScreen() {
   const [expiryDate, setExpiryDate] = useState<Date | null>(null);
   const [storeName, setStoreName] = useState("");
   const [showCustomStore, setShowCustomStore] = useState(false);
-  const [showPicker, setShowPicker] = useState<"purchase" | "expiry" | null>(null);
+  const [showPicker, setShowPicker] = useState<"purchase" | "expiry" | null>(
+    null,
+  );
+  const [status, setStatus] = useState<Status>("available");
 
   const formatDate = (date: Date | null) => {
     if (!date) return "";
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, "0");
-    const day = String(date.getDate()).padStart(2, "0");
+    const year = date.getUTCFullYear();
+    const month = String(date.getUTCMonth() + 1).padStart(2, "0");
+    const day = String(date.getUTCDate()).padStart(2, "0");
     return `${year}-${month}-${day}`;
   };
 
-  const onDateChange = (event: DateTimePickerEvent, selectedDate?: Date, target?: "purchase" | "expiry") => {
+  const onDateChange = (
+    _: DateTimePickerChangeEvent,
+    selectedDate?: Date,
+    target?: "purchase" | "expiry",
+  ) => {
     if (Platform.OS === "android") {
       setShowPicker(null);
     }
-    if (event.type === "set" && selectedDate && target) {
-      if (target === "purchase") setPurchaseDate(selectedDate);
-      else setExpiryDate(selectedDate);
+
+    if (!selectedDate || !target) return;
+
+    if (target === "purchase") {
+      setPurchaseDate(selectedDate);
+    } else {
+      setExpiryDate(selectedDate);
     }
   };
 
@@ -64,20 +78,29 @@ export default function AddItemScreen() {
       return;
     }
 
+    const qty = parseInt(quantity) || 1;
+    const finalStatus = qty === 0 ? "empty" : status;
+
     try {
       await addItem(user.id, {
         name: name.trim(),
-        quantity: parseInt(quantity) || 1,
+        quantity: qty,
         unit,
         category,
         price: price ? parseFloat(price) : null,
         purchase_date: formatDate(purchaseDate) || null,
-        store_name: showCustomStore ? storeName.trim() || null : storeName || null,
+        store_name: showCustomStore
+          ? storeName.trim() || null
+          : storeName || null,
         expiry_date: formatDate(expiryDate) || null,
+        status: finalStatus,
+        avg_days_per_unit: null,
+        total_consumed: 0,
       });
-      router.back();
-    } catch (error) {
+      router.push("/(tabs)/fridge");
+    } catch (e) {
       Alert.alert("Error", "No se pudo agregar el item");
+      console.error("Add item error:", e);
     }
   };
 
@@ -184,24 +207,75 @@ export default function AddItemScreen() {
         </View>
 
         <View style={styles.field}>
+          <Text style={[styles.label, { color: colors.text }]}>Estado</Text>
+          <View style={styles.categoryGrid}>
+            {(["available", "low", "empty"] as Status[]).map((s) => (
+              <TouchableOpacity
+                key={s}
+                style={[
+                  styles.categoryChip,
+                  { backgroundColor: colors.card },
+                  status === s && {
+                    backgroundColor:
+                      s === "available"
+                        ? colors.primary
+                        : s === "low"
+                          ? "#FFA500"
+                          : "#FF4444",
+                  },
+                ]}
+                onPress={() => setStatus(s)}
+              >
+                <Text
+                  style={[
+                    styles.categoryChipText,
+                    { color: colors.text },
+                    status === s && { color: "#fff" },
+                  ]}
+                >
+                  {s === "available"
+                    ? "Disponible"
+                    : s === "low"
+                      ? "Próximo a agotarse"
+                      : "Agotado"}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+
+        <View style={styles.field}>
           <Text style={[styles.label, { color: colors.text }]}>Valor</Text>
-          <TextInput
-            style={[styles.input, { backgroundColor: colors.card, color: colors.text }]}
-            value={price}
-            onChangeText={setPrice}
-            keyboardType="decimal-pad"
-            placeholder="$ 0.00"
-            placeholderTextColor={colors.textSecondary}
+          <CurrencyInput
+            value={parseFloat(price)}
+            onChangeValue={(parse) => setPrice(parse ? parse.toString() : "")}
+            prefix="$ "
+            delimiter="."
+            separator=","
+            precision={0}
+            style={[
+              styles.input,
+              { backgroundColor: colors.card, color: colors.text },
+            ]}
           />
         </View>
 
         <View style={styles.field}>
-          <Text style={[styles.label, { color: colors.text }]}>Fecha de compra</Text>
+          <Text style={[styles.label, { color: colors.text }]}>
+            Fecha de compra
+          </Text>
           <TouchableOpacity
-            style={[styles.input, { backgroundColor: colors.card, justifyContent: 'center' }]}
+            style={[
+              styles.input,
+              { backgroundColor: colors.card, justifyContent: "center" },
+            ]}
             onPress={() => setShowPicker("purchase")}
           >
-            <Text style={{ color: purchaseDate ? colors.text : colors.textSecondary }}>
+            <Text
+              style={{
+                color: purchaseDate ? colors.text : colors.textSecondary,
+              }}
+            >
               {purchaseDate ? formatDate(purchaseDate) : "Seleccionar fecha"}
             </Text>
           </TouchableOpacity>
@@ -210,24 +284,35 @@ export default function AddItemScreen() {
               value={purchaseDate || new Date()}
               mode="date"
               display="default"
-              onChange={(event, date) => onDateChange(event, date, "purchase")}
+              onValueChange={(event, date) =>
+                onDateChange(event, date, "purchase")
+              }
             />
           )}
         </View>
 
         <View style={styles.field}>
-          <Text style={[styles.label, { color: colors.text }]}>Fecha de vencimiento</Text>
+          <Text style={[styles.label, { color: colors.text }]}>
+            Fecha de vencimiento
+          </Text>
           <TouchableOpacity
-            style={[styles.input, { backgroundColor: colors.card, justifyContent: 'center' }]}
+            style={[
+              styles.input,
+              { backgroundColor: colors.card, justifyContent: "center" },
+            ]}
             onPress={() => setShowPicker("expiry")}
           >
-            <Text style={{ color: expiryDate ? colors.text : colors.textSecondary }}>
+            <Text
+              style={{ color: expiryDate ? colors.text : colors.textSecondary }}
+            >
               {expiryDate ? formatDate(expiryDate) : "No vence"}
             </Text>
           </TouchableOpacity>
           {expiryDate && (
             <TouchableOpacity onPress={() => setExpiryDate(null)}>
-              <Text style={{ color: colors.tint, fontSize: 14, marginTop: 4 }}>Eliminar fecha</Text>
+              <Text style={{ color: colors.tint, fontSize: 14, marginTop: 4 }}>
+                Eliminar fecha
+              </Text>
             </TouchableOpacity>
           )}
           {showPicker === "expiry" && (
@@ -235,13 +320,17 @@ export default function AddItemScreen() {
               value={expiryDate || new Date()}
               mode="date"
               display="default"
-              onChange={(event, date) => onDateChange(event, date, "expiry")}
+              onValueChange={(event, date) =>
+                onDateChange(event, date, "expiry")
+              }
             />
           )}
         </View>
 
         <View style={styles.field}>
-          <Text style={[styles.label, { color: colors.text }]}>Establecimiento</Text>
+          <Text style={[styles.label, { color: colors.text }]}>
+            Establecimiento
+          </Text>
           <View style={styles.categoryGrid}>
             {STORES.map((s) => (
               <TouchableOpacity
@@ -249,7 +338,9 @@ export default function AddItemScreen() {
                 style={[
                   styles.categoryChip,
                   { backgroundColor: colors.card },
-                  (s === "Otro" ? showCustomStore : storeName === s) && { backgroundColor: colors.primary },
+                  (s === "Otro" ? showCustomStore : storeName === s) && {
+                    backgroundColor: colors.primary,
+                  },
                 ]}
                 onPress={() => {
                   if (s === "Otro") {
@@ -265,7 +356,9 @@ export default function AddItemScreen() {
                   style={[
                     styles.categoryChipText,
                     { color: colors.text },
-                    (s === "Otro" ? showCustomStore : storeName === s) && { color: "#fff" },
+                    (s === "Otro" ? showCustomStore : storeName === s) && {
+                      color: "#fff",
+                    },
                   ]}
                 >
                   {s}
@@ -275,7 +368,14 @@ export default function AddItemScreen() {
           </View>
           {showCustomStore && (
             <TextInput
-              style={[styles.input, { backgroundColor: colors.card, color: colors.text, marginTop: 8 }]}
+              style={[
+                styles.input,
+                {
+                  backgroundColor: colors.card,
+                  color: colors.text,
+                  marginTop: 8,
+                },
+              ]}
               value={storeName}
               onChangeText={setStoreName}
               placeholder="Escribe el nombre del establecimiento"
@@ -349,12 +449,12 @@ const styles = StyleSheet.create({
     height: 44,
     borderRadius: 22,
     marginRight: 8,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   unitChipText: {
     fontSize: 14,
-    textAlign: 'center',
+    textAlign: "center",
   },
   categoryGrid: {
     flexDirection: "row",

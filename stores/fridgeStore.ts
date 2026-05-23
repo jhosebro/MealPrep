@@ -38,6 +38,7 @@ export const useFridgeStore = create<FridgeState>((set, get) => ({
       }));
     } catch (error) {
       set({ error: (error as Error).message, loading: false });
+      throw error;
     }
   },
 

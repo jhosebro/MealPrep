@@ -1,3 +1,5 @@
+export type Status = "available" | "low" | "empty";
+
 export interface FridgeItem {
   id: string;
   user_id: string;
@@ -9,6 +11,9 @@ export interface FridgeItem {
   purchase_date: string | null;
   store_name: string | null;
   expiry_date: string | null;
+  status: Status;
+  avg_days_per_unit: number | null;
+  total_consumed: number;
   created_at: string;
 }
 
@@ -45,11 +50,14 @@ export const CATEGORIES = [
   "lacteos",
   "granos",
   "condimentos",
+  "cereales",
+  "ocasionales",
   "otros",
 ] as const;
 
 export const UNITS = [
   "und",
+  "paq",
   "kg",
   "g",
   "lb",
@@ -61,7 +69,14 @@ export const UNITS = [
   "tsp",
 ] as const;
 
-export const STORES = ["Exito", "D1", "Ara", "Surtifamiliar", "Otro"] as const;
+export const STORES = [
+  "Exito",
+  "D1",
+  "Ara",
+  "Surtifamiliar",
+  "El hato",
+  "Otro",
+] as const;
 
 export type Category = (typeof CATEGORIES)[number];
 export type Unit = (typeof UNITS)[number];
