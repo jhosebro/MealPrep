@@ -1,0 +1,19 @@
+{
+  "enabled": true,
+  "name": "Typecheck on Save",
+  "description": "Runs TypeScript type checking without emitting files whenever a TypeScript or TSX file is saved",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": [
+      "**/*.ts",
+      "**/*.tsx"
+    ]
+  },
+  "then": {
+    "type": "runCommand",
+    "command": "npx tsc --noEmit"
+  },
+  "workspaceFolderName": "MealPrep",
+  "shortName": "typecheck-on-save"
+}
