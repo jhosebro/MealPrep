@@ -1,3 +1,5 @@
+import React from "react";
+
 export type Status = "available" | "low" | "empty";
 
 export interface FridgeItem {
@@ -81,3 +83,40 @@ export const STORES = [
 export type Category = (typeof CATEGORIES)[number];
 export type Unit = (typeof UNITS)[number];
 export type Store = (typeof STORES)[number];
+
+export interface ResponsiveContainerProps {
+  children: React.ReactNode;
+  maxWidth?: number;
+}
+
+export interface WebLayoutShellProps {
+  children: React.ReactNode;
+}
+
+export interface NavigationItem {
+  route: string;
+  label: string;
+  icon: string;
+}
+
+export const BREAKPOINTS = {
+  tablet: 768,
+  desktop: 1024,
+} as const;
+
+export const RESPONSIVE_DEFAULTS = {
+  contentMaxWidth: 480,
+  loginCardMaxWidth: 400,
+  sidebarWidth: 220,
+} as const;
+
+export interface PriceValidationResult {
+  valid: boolean;
+  value: number | null;
+}
+
+export interface PriceEditState {
+  editingItemId: string | null;
+  savingPrice: boolean;
+  flashItemId: string | null;
+}

@@ -1,16 +1,20 @@
-import { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, Alert } from 'react-native';
-import { useRouter } from 'expo-router';
-import { useAuthStore } from '@/stores/authStore';
-import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Colors } from '@/constants/theme';
+import { useColorScheme } from '@/hooks/use-color-scheme';
 import { biometricService } from '@/services/biometricService';
+import { useAuthStore } from '@/stores/authStore';
+import { BREAKPOINTS, RESPONSIVE_DEFAULTS } from '@/types';
+import { useRouter } from 'expo-router';
+import { useEffect, useState } from 'react';
+import { ActivityIndicator, Alert, Platform, StyleSheet, Text, TextInput, TouchableOpacity, useWindowDimensions, View } from 'react-native';
 
 export default function LoginScreen() {
   const router = useRouter();
   const colorScheme = useColorScheme();
-  const colors = Colors[colorScheme ?? 'light'];
+  const colors = Colors[colorScheme === 'dark' ? 'dark' : 'light'];
   const { user, initialize, signIn, signUp, loading } = useAuthStore();
+
+  const { width } = useWindowDimensions();
+  const isDesktop = Platform.OS === 'web' && width > BREAKPOINTS.tablet;
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -80,8 +84,8 @@ export default function LoginScreen() {
     }
   };
 
-  return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
+  const formContent = (
+    <>
       <Text style={[styles.title, { color: colors.text }]}>MealPrep</Text>
       <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
         {isSignUp ? 'Crea una cuenta' : 'Inicia sesión'}
@@ -142,6 +146,22 @@ export default function LoginScreen() {
           </Text>
         </TouchableOpacity>
       </View>
+    </>
+  );
+
+  if (isDesktop) {
+    return (
+      <View style={[styles.container, styles.desktopContainer, { backgroundColor: colors.background }]}>
+        <View style={[styles.card, { backgroundColor: colors.card }, Platform.OS === 'web' && { boxShadow: '0px 2px 8px rgba(0, 0, 0, 0.2)' } as any]}>
+          {formContent}
+        </View>
+      </View>
+    );
+  }
+
+  return (
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      {formContent}
     </View>
   );
 }
@@ -151,6 +171,15 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     padding: 20,
+  },
+  desktopContainer: {
+    alignItems: 'center',
+  },
+  card: {
+    maxWidth: RESPONSIVE_DEFAULTS.loginCardMaxWidth,
+    width: '100%',
+    borderRadius: 12,
+    padding: 32,
   },
   title: {
     fontSize: 32,

@@ -1,23 +1,26 @@
+import { PriceEditor } from "@/components/price-editor";
 import { Colors } from "@/constants/theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
-import { useAuthStore } from "@/stores/authStore";
-import { useFridgeStore } from "@/stores/fridgeStore";
-import { useBudgetStore } from "@/stores/budgetStore";
 import { BudgetPurchase } from "@/services/budgetService";
+import { useAuthStore } from "@/stores/authStore";
+import { useBudgetStore } from "@/stores/budgetStore";
+import { useFridgeStore } from "@/stores/fridgeStore";
 import { CATEGORIES, FridgeItem, Status, STORES } from "@/types";
+import { computeShoppingTotal } from "@/utils/compute-shopping-total";
 import { useFocusEffect } from "expo-router";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  Alert,
-  Modal,
-  RefreshControl,
-  ScrollView,
-  SectionList,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    Alert,
+    Animated,
+    Modal,
+    RefreshControl,
+    ScrollView,
+    SectionList,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -54,6 +57,23 @@ export default function ShoppingScreen() {
   const [selectedStore, setSelectedStore] = useState<string | null>(null);
   const [showBudgetModal, setShowBudgetModal] = useState(false);
   const [budgetAmount, setBudgetAmount] = useState("");
+  const [editingItemId, setEditingItemId] = useState<string | null>(null);
+  const [savingPrice, setSavingPrice] = useState(false);
+  const [flashItemId, setFlashItemId] = useState<string | null>(null);
+  const flashAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (flashItemId) {
+      flashAnim.setValue(1);
+      Animated.timing(flashAnim, {
+        toValue: 0,
+        duration: 400,
+        useNativeDriver: false,
+      }).start(() => {
+        setFlashItemId(null);
+      });
+    }
+  }, [flashItemId]);
 
   useEffect(() => {
     if (user) {
@@ -116,7 +136,7 @@ export default function ShoppingScreen() {
   }, [filteredItems]);
 
   const total = useMemo(() => {
-    return filteredItems.reduce((sum, item) => sum + (item.price || 0), 0);
+    return computeShoppingTotal(filteredItems);
   }, [filteredItems]);
 
   const catCounts = useMemo(() => {
@@ -208,40 +228,97 @@ export default function ShoppingScreen() {
     );
   };
 
-  const renderItem = ({ item }: { item: FridgeItem }) => (
-    <View style={[styles.itemCard, { backgroundColor: colors.card }]}>
-      <View
-        style={[
-          styles.statusDot,
-          { backgroundColor: statusColor[item.status] },
-        ]}
-      />
-      <View style={styles.itemContent}>
-        <Text style={[styles.itemName, { color: colors.text }]}>
-          {item.name}
-        </Text>
-        <Text style={[styles.itemDetails, { color: colors.textSecondary }]}>
-          {item.quantity} {item.unit} · {item.store_name || "Otro"}
-        </Text>
-        {item.price != null && (
-          <Text style={[styles.itemPrice, { color: colors.textSecondary }]}>
-            ${item.price.toLocaleString()}
+  const handlePriceConfirm = async (itemId: string, newPrice: number | null) => {
+    setSavingPrice(true);
+    try {
+      await updateItem(itemId, { price: newPrice });
+      setEditingItemId(null);
+      setFlashItemId(itemId);
+    } catch {
+      Alert.alert('Error', 'No se pudo guardar el precio. Intenta de nuevo.');
+    } finally {
+      setSavingPrice(false);
+    }
+  };
+
+  const handlePriceCancel = () => {
+    setEditingItemId(null);
+  };
+
+  const renderItem = ({ item }: { item: FridgeItem }) => {
+    const isEditing = editingItemId === item.id;
+    const isFlashing = flashItemId === item.id;
+
+    const animatedStyle = isFlashing
+      ? {
+          backgroundColor: flashAnim.interpolate({
+            inputRange: [0, 1],
+            outputRange: ["transparent", `${colors.primary}26`],
+          }),
+        }
+      : undefined;
+
+    return (
+      <Animated.View style={[
+        styles.itemCard,
+        { backgroundColor: colors.card },
+        isEditing && { borderWidth: 2, borderColor: colors.primary },
+        animatedStyle,
+      ]}>
+        <View
+          style={[
+            styles.statusDot,
+            { backgroundColor: statusColor[item.status] },
+          ]}
+        />
+        <View style={styles.itemContent}>
+          <Text style={[styles.itemName, { color: colors.text }]}>
+            {item.name}
           </Text>
-        )}
-        <Text
-          style={[styles.statusLabel, { color: statusColor[item.status] }]}
+          <Text style={[styles.itemDetails, { color: colors.textSecondary }]}>
+            {item.quantity} {item.unit} · {item.store_name || "Otro"}
+          </Text>
+          {isEditing ? (
+            <PriceEditor
+              currentPrice={item.price}
+              saving={savingPrice}
+              onConfirm={(newPrice) => handlePriceConfirm(item.id, newPrice)}
+              onCancel={handlePriceCancel}
+              colors={colors}
+            />
+          ) : (
+            <TouchableOpacity
+              style={styles.priceArea}
+              onPress={() => { if (editingItemId === null) setEditingItemId(item.id); }}
+              accessibilityLabel="Editar precio"
+              accessibilityRole="button"
+            >
+              {item.price != null ? (
+                <Text style={[styles.itemPrice, { color: colors.textSecondary }]}>
+                  ${item.price.toLocaleString()}
+                </Text>
+              ) : (
+                <Text style={[styles.itemPrice, { color: colors.textSecondary }]}>
+                  Sin precio
+                </Text>
+              )}
+            </TouchableOpacity>
+          )}
+          <Text
+            style={[styles.statusLabel, { color: statusColor[item.status] }]}
+          >
+            {statusLabel[item.status]}
+          </Text>
+        </View>
+        <TouchableOpacity
+          style={[styles.buyButton, { backgroundColor: colors.primary }]}
+          onPress={() => handleMarkBought(item)}
         >
-          {statusLabel[item.status]}
-        </Text>
-      </View>
-      <TouchableOpacity
-        style={[styles.buyButton, { backgroundColor: colors.primary }]}
-        onPress={() => handleMarkBought(item)}
-      >
-        <Text style={styles.buyButtonText}>Comprado</Text>
-      </TouchableOpacity>
-    </View>
-  );
+          <Text style={styles.buyButtonText}>Comprado</Text>
+        </TouchableOpacity>
+      </Animated.View>
+    );
+  };
 
   const renderEmpty = () => (
     <View style={styles.emptyContainer}>
@@ -510,6 +587,10 @@ export default function ShoppingScreen() {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
         showsVerticalScrollIndicator={false}
+        onScrollBeginDrag={() => {
+          if (editingItemId) setEditingItemId(null);
+        }}
+        keyboardShouldPersistTaps="handled"
       />
 
       <Modal
@@ -712,6 +793,11 @@ const styles = StyleSheet.create({
   itemPrice: {
     fontSize: 14,
     marginTop: 2,
+  },
+  priceArea: {
+    minWidth: 44,
+    minHeight: 44,
+    justifyContent: "center",
   },
   statusLabel: {
     fontSize: 12,

@@ -4,7 +4,7 @@ import { fridgeService } from "@/services/fridgeService";
 import { useFridgeStore } from "@/stores/fridgeStore";
 import { CATEGORIES, FridgeItem, Status, STORES, UNITS } from "@/types";
 import DateTimePicker, {
-  DateTimePickerChangeEvent,
+  DateTimePickerEvent,
 } from "@react-native-community/datetimepicker";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
@@ -23,7 +23,7 @@ export default function EditItemScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const colorScheme = useColorScheme();
-  const colors = Colors[colorScheme ?? "light"];
+  const colors = Colors[colorScheme === "dark" ? "dark" : "light"];
   const { updateItem, deleteItem, loading } = useFridgeStore();
   const [dbItem, setDbItem] = useState<FridgeItem | null>(null);
 
@@ -64,7 +64,7 @@ export default function EditItemScreen() {
   };
 
   const onDateChange = (
-    _: DateTimePickerChangeEvent,
+    _: DateTimePickerEvent,
     selectedDate?: Date,
     target?: "purchase" | "expiry",
   ) => {
@@ -359,7 +359,7 @@ export default function EditItemScreen() {
               value={purchaseDate || new Date()}
               mode="date"
               display="default"
-              onValueChange={(event, date) =>
+              onChange={(event: DateTimePickerEvent, date?: Date) =>
                 onDateChange(event, date, "purchase")
               }
             />
@@ -395,8 +395,8 @@ export default function EditItemScreen() {
               value={expiryDate || new Date()}
               mode="date"
               display="default"
-              onValueChange={(event, date) =>
-                onDateChange(event, date, "purchase")
+              onChange={(event: DateTimePickerEvent, date?: Date) =>
+                onDateChange(event, date, "expiry")
               }
             />
           )}

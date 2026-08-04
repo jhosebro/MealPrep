@@ -3,9 +3,8 @@ import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useAuthStore } from "@/stores/authStore";
 import { useFridgeStore } from "@/stores/fridgeStore";
 import { CATEGORIES, Status, STORES, UNITS } from "@/types";
-import DateTimePicker, {
-  DateTimePickerChangeEvent,
-} from "@react-native-community/datetimepicker";
+import type { DateTimePickerEvent } from "@react-native-community/datetimepicker";
+import DateTimePicker from "@react-native-community/datetimepicker";
 import { useRouter } from "expo-router";
 import { useState } from "react";
 import {
@@ -23,7 +22,7 @@ import CurrencyInput from "react-native-currency-input";
 export default function AddItemScreen() {
   const router = useRouter();
   const colorScheme = useColorScheme();
-  const colors = Colors[colorScheme ?? "light"];
+  const colors = Colors[(colorScheme ?? "light") as keyof typeof Colors];
   const { user } = useAuthStore();
   const { addItem, loading } = useFridgeStore();
 
@@ -50,7 +49,7 @@ export default function AddItemScreen() {
   };
 
   const onDateChange = (
-    _: DateTimePickerChangeEvent,
+    _: DateTimePickerEvent,
     selectedDate?: Date,
     target?: "purchase" | "expiry",
   ) => {
@@ -107,7 +106,7 @@ export default function AddItemScreen() {
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.push("/(tabs)/fridge")}>
+        <TouchableOpacity onPress={() => router.back()}>
           <Text style={[styles.backButton, { color: colors.tint }]}>
             ‹ Volver
           </Text>
@@ -284,7 +283,7 @@ export default function AddItemScreen() {
               value={purchaseDate || new Date()}
               mode="date"
               display="default"
-              onValueChange={(event, date) =>
+              onChange={(event, date) =>
                 onDateChange(event, date, "purchase")
               }
             />
@@ -320,7 +319,7 @@ export default function AddItemScreen() {
               value={expiryDate || new Date()}
               mode="date"
               display="default"
-              onValueChange={(event, date) =>
+              onChange={(event, date) =>
                 onDateChange(event, date, "expiry")
               }
             />
