@@ -12,10 +12,16 @@ import { BREAKPOINTS } from '@/types';
 
 export default function TabLayout() {
   const colorScheme = useColorScheme();
-  const { user, initialized } = useAuthStore();
+  const { user, initialized, initialize } = useAuthStore();
   const router = useRouter();
   const { width } = useWindowDimensions();
   const hideTabBar = Platform.OS === 'web' && width > BREAKPOINTS.desktop;
+
+  useEffect(() => {
+    if (!initialized) {
+      initialize();
+    }
+  }, [initialized]);
 
   useEffect(() => {
     if (initialized && !user) {
