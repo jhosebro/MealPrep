@@ -34,7 +34,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     if (data.session) {
       await AsyncStorage.setItem(SESSION_KEY, JSON.stringify(data.session));
     }
-    set({ user: data.user, loading: false });
+    set({ user: data.user, loading: false, initialized: true });
     return { error: null };
   },
 
@@ -48,7 +48,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     if (data.session) {
       await AsyncStorage.setItem(SESSION_KEY, JSON.stringify(data.session));
     }
-    set({ user: data.user, loading: false });
+    set({ user: data.user, loading: false, initialized: true });
     return { error: null };
   },
 
