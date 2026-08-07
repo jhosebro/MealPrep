@@ -1,4 +1,4 @@
-import { DatePicker } from "@/components/date-picker";
+import { DateField } from "@/components/date-field";
 import { Colors } from "@/constants/theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { fridgeService } from "@/services/fridgeService";
@@ -8,7 +8,6 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import {
     Alert,
-    Platform,
     ScrollView,
     StyleSheet,
     Text,
@@ -34,9 +33,6 @@ export default function EditItemScreen() {
   const [expiryDate, setExpiryDate] = useState<Date | null>(null);
   const [storeName, setStoreName] = useState("");
   const [showCustomStore, setShowCustomStore] = useState(false);
-  const [showPicker, setShowPicker] = useState<"purchase" | "expiry" | null>(
-    null,
-  );
   const [status, setStatus] = useState<Status>("available");
 
   useEffect(() => {
@@ -319,69 +315,26 @@ export default function EditItemScreen() {
           <Text style={[styles.label, { color: colors.text }]}>
             Fecha de compra
           </Text>
-          <TouchableOpacity
-            style={[
-              styles.input,
-              { backgroundColor: colors.card, justifyContent: "center" },
-            ]}
-            onPress={() => setShowPicker("purchase")}
-          >
-            <Text
-              style={{
-                color: purchaseDate ? colors.text : colors.textSecondary,
-              }}
-            >
-              {purchaseDate ? formatDate(purchaseDate) : "Seleccionar fecha"}
-            </Text>
-          </TouchableOpacity>
-          {showPicker === "purchase" && (
-            <DatePicker
-              value={purchaseDate || new Date()}
-              onChange={(date) => {
-                setPurchaseDate(date);
-                if (Platform.OS !== "ios") setShowPicker(null);
-              }}
-              onDismiss={() => setShowPicker(null)}
-              colors={colors}
-            />
-          )}
+          <DateField
+            value={purchaseDate}
+            onChange={setPurchaseDate}
+            placeholder="Seleccionar fecha"
+            colors={colors}
+          />
         </View>
 
         <View style={styles.field}>
           <Text style={[styles.label, { color: colors.text }]}>
             Fecha de vencimiento
           </Text>
-          <TouchableOpacity
-            style={[
-              styles.input,
-              { backgroundColor: colors.card, justifyContent: "center" },
-            ]}
-            onPress={() => setShowPicker("expiry")}
-          >
-            <Text
-              style={{ color: expiryDate ? colors.text : colors.textSecondary }}
-            >
-              {expiryDate ? formatDate(expiryDate) : "No vence"}
-            </Text>
-          </TouchableOpacity>
-          {expiryDate && (
-            <TouchableOpacity onPress={() => setExpiryDate(null)}>
-              <Text style={{ color: colors.tint, fontSize: 14, marginTop: 4 }}>
-                Eliminar fecha
-              </Text>
-            </TouchableOpacity>
-          )}
-          {showPicker === "expiry" && (
-            <DatePicker
-              value={expiryDate || new Date()}
-              onChange={(date) => {
-                setExpiryDate(date);
-                if (Platform.OS !== "ios") setShowPicker(null);
-              }}
-              onDismiss={() => setShowPicker(null)}
-              colors={colors}
-            />
-          )}
+          <DateField
+            value={expiryDate}
+            onChange={setExpiryDate}
+            placeholder="No vence"
+            colors={colors}
+            showClear
+            clearLabel="Eliminar fecha"
+          />
         </View>
 
         <View style={styles.field}>
