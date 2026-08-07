@@ -1,21 +1,20 @@
+import { DatePicker } from "@/components/date-picker";
 import { Colors } from "@/constants/theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useAuthStore } from "@/stores/authStore";
 import { useFridgeStore } from "@/stores/fridgeStore";
 import { CATEGORIES, Status, STORES, UNITS } from "@/types";
-import type { DateTimePickerEvent } from "@react-native-community/datetimepicker";
-import DateTimePicker from "@react-native-community/datetimepicker";
 import { useRouter } from "expo-router";
 import { useState } from "react";
 import {
-  Alert,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    Alert,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import CurrencyInput from "react-native-currency-input";
 
@@ -42,28 +41,10 @@ export default function AddItemScreen() {
 
   const formatDate = (date: Date | null) => {
     if (!date) return "";
-    const year = date.getUTCFullYear();
-    const month = String(date.getUTCMonth() + 1).padStart(2, "0");
-    const day = String(date.getUTCDate()).padStart(2, "0");
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
     return `${year}-${month}-${day}`;
-  };
-
-  const onDateChange = (
-    _: DateTimePickerEvent,
-    selectedDate?: Date,
-    target?: "purchase" | "expiry",
-  ) => {
-    if (Platform.OS === "android") {
-      setShowPicker(null);
-    }
-
-    if (!selectedDate || !target) return;
-
-    if (target === "purchase") {
-      setPurchaseDate(selectedDate);
-    } else {
-      setExpiryDate(selectedDate);
-    }
   };
 
   const handleSave = async () => {
@@ -279,13 +260,14 @@ export default function AddItemScreen() {
             </Text>
           </TouchableOpacity>
           {showPicker === "purchase" && (
-            <DateTimePicker
+            <DatePicker
               value={purchaseDate || new Date()}
-              mode="date"
-              display="default"
-              onChange={(event, date) =>
-                onDateChange(event, date, "purchase")
-              }
+              onChange={(date) => {
+                setPurchaseDate(date);
+                if (Platform.OS !== "ios") setShowPicker(null);
+              }}
+              onDismiss={() => setShowPicker(null)}
+              colors={colors}
             />
           )}
         </View>
@@ -315,13 +297,14 @@ export default function AddItemScreen() {
             </TouchableOpacity>
           )}
           {showPicker === "expiry" && (
-            <DateTimePicker
+            <DatePicker
               value={expiryDate || new Date()}
-              mode="date"
-              display="default"
-              onChange={(event, date) =>
-                onDateChange(event, date, "expiry")
-              }
+              onChange={(date) => {
+                setExpiryDate(date);
+                if (Platform.OS !== "ios") setShowPicker(null);
+              }}
+              onDismiss={() => setShowPicker(null)}
+              colors={colors}
             />
           )}
         </View>
