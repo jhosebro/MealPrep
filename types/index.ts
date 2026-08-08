@@ -24,13 +24,23 @@ export interface User {
   email?: string;
 }
 
+export type MealType = "desayuno" | "almuerzo" | "cena";
+export type Difficulty = "fácil" | "media" | "difícil";
+
+export const MEAL_TYPES: MealType[] = ["desayuno", "almuerzo", "cena"] as const;
+export const DIFFICULTIES: Difficulty[] = ["fácil", "media", "difícil"] as const;
+
 export interface Recipe {
   id?: string;
   title: string;
-  meal_type: "desayuno" | "almuerzo" | "cena";
+  meal_type: MealType;
+  servings: number;
+  prep_time_minutes?: number;
+  difficulty?: Difficulty;
   ingredients: string[];
   missing_ingredients?: string[];
   steps: string[];
+  notes?: string;
 }
 
 export interface SavedRecipe {
@@ -38,11 +48,27 @@ export interface SavedRecipe {
   user_id: string;
   recipe_data: Recipe;
   created_at: string;
+  last_cooked_at: string | null;
 }
 
 export interface GeneratedRecipesResponse {
   recipes: Recipe[];
 }
+
+export const RECIPE_JSON_TEMPLATE: string = JSON.stringify(
+  {
+    title: "Nombre de la receta",
+    meal_type: "desayuno",
+    servings: 2,
+    prep_time_minutes: 20,
+    difficulty: "fácil",
+    ingredients: ["2 huevos", "1 taza de arroz", "sal al gusto"],
+    steps: ["Paso 1...", "Paso 2...", "Paso 3..."],
+    notes: "Opcional: notas personales",
+  },
+  null,
+  2
+);
 
 export const CATEGORIES = [
   "frutas",

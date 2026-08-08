@@ -1,21 +1,53 @@
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Alert } from 'react-native';
-import { useRouter } from 'expo-router';
+import { Colors } from '@/constants/theme';
+import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useAuthStore } from '@/stores/authStore';
 import { useRecipesStore } from '@/stores/recipesStore';
-import { useColorScheme } from '@/hooks/use-color-scheme';
-import { Colors } from '@/constants/theme';
+import { useRouter } from 'expo-router';
+import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+
+const formatDate = (dateStr: string): string => {
+  const date = new Date(dateStr);
+  return date.toLocaleDateString('es-CO', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+};
 
 export default function RecipeDetailScreen() {
   const router = useRouter();
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
   const { user } = useAuthStore();
-  const { selectedRecipe, selectedRecipeSavedId, saveRecipe, deleteSavedRecipe, loading } = useRecipesStore();
+  const { selectedRecipe, selectedRecipeSavedId, savedRecipes, saveRecipe, markAsCooked, deleteSavedRecipe, loading } = useRecipesStore();
+
+  const savedEntry = savedRecipes.find((r) => r.id === selectedRecipeSavedId);
+  const lastCookedAt = savedEntry?.last_cooked_at;
 
   const handleSave = async () => {
     if (!user || !selectedRecipe) return;
     await saveRecipe(user.id, selectedRecipe);
     Alert.alert('Éxito', 'Receta guardada');
+  };
+
+  const handleMarkCooked = () => {
+    if (!selectedRecipeSavedId) return;
+    Alert.alert(
+      '¿Ya la preparaste?',
+      'Se marcará como preparada y no se sugerirá en los próximos 7 días.',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Sí, la preparé',
+          onPress: async () => {
+            await markAsCooked(selectedRecipeSavedId);
+            Alert.alert('Listo', '¡Buen provecho! 🍽');
+          },
+        },
+      ]
+    );
   };
 
   const handleDelete = () => {
@@ -64,7 +96,7 @@ export default function RecipeDetailScreen() {
         </TouchableOpacity>
         {isSaved && selectedRecipeSavedId && (
           <TouchableOpacity onPress={handleDelete}>
-            <Text style={{ color: 'red' }}>Eliminar</Text>
+            <Text style={styles.deleteText}>Eliminar</Text>
           </TouchableOpacity>
         )}
       </View>
@@ -75,6 +107,30 @@ export default function RecipeDetailScreen() {
           <View style={[styles.mealTypeBadge, { backgroundColor: getMealTypeColor(selectedRecipe.meal_type) }]}>
             <Text style={styles.mealTypeText}>{selectedRecipe.meal_type}</Text>
           </View>
+        </View>
+
+        <View style={styles.metaRow}>
+          {selectedRecipe.servings && (
+            <View style={[styles.metaChip, { backgroundColor: colors.card }]}>
+              <Text style={[styles.metaChipText, { color: colors.textSecondary }]}>
+                🍽 {selectedRecipe.servings} {selectedRecipe.servings === 1 ? 'porción' : 'porciones'}
+              </Text>
+            </View>
+          )}
+          {selectedRecipe.prep_time_minutes && (
+            <View style={[styles.metaChip, { backgroundColor: colors.card }]}>
+              <Text style={[styles.metaChipText, { color: colors.textSecondary }]}>
+                ⏱ {selectedRecipe.prep_time_minutes} min
+              </Text>
+            </View>
+          )}
+          {selectedRecipe.difficulty && (
+            <View style={[styles.metaChip, { backgroundColor: colors.card }]}>
+              <Text style={[styles.metaChipText, { color: colors.textSecondary }]}>
+                📊 {selectedRecipe.difficulty}
+              </Text>
+            </View>
+          )}
         </View>
 
         <View style={styles.section}>
@@ -109,15 +165,46 @@ export default function RecipeDetailScreen() {
           ))}
         </View>
 
-        {!isSaved && (
-          <TouchableOpacity
-            style={[styles.saveButton, { backgroundColor: colors.primary }]}
-            onPress={handleSave}
-            disabled={loading}
-          >
-            <Text style={styles.saveButtonText}>Guardar Receta</Text>
-          </TouchableOpacity>
+        {selectedRecipe.notes && (
+          <View style={styles.section}>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>Notas</Text>
+            <Text style={[styles.notesText, { color: colors.textSecondary }]}>
+              {selectedRecipe.notes}
+            </Text>
+          </View>
         )}
+
+        <View style={styles.actionsContainer}>
+          {isSaved && lastCookedAt && (
+            <View style={[styles.cookedInfoBanner, { backgroundColor: colors.card }]}>
+              <Text style={[styles.cookedInfoText, { color: colors.text }]}>
+                ✅ Última preparación: {formatDate(lastCookedAt)}
+              </Text>
+            </View>
+          )}
+
+          {isSaved && (
+            <TouchableOpacity
+              style={[styles.cookedButton, { backgroundColor: lastCookedAt ? '#8BC34A' : '#FF9800' }]}
+              onPress={handleMarkCooked}
+              disabled={loading}
+            >
+              <Text style={styles.actionButtonText}>
+                {lastCookedAt ? '🍳 Preparar de nuevo' : '🍳 Ya la preparé'}
+              </Text>
+            </TouchableOpacity>
+          )}
+
+          {!isSaved && (
+            <TouchableOpacity
+              style={[styles.saveButton, { backgroundColor: colors.primary }]}
+              onPress={handleSave}
+              disabled={loading}
+            >
+              <Text style={styles.actionButtonText}>Guardar Receta</Text>
+            </TouchableOpacity>
+          )}
+        </View>
       </ScrollView>
     </View>
   );
@@ -138,6 +225,10 @@ const styles = StyleSheet.create({
   backButton: {
     fontSize: 18,
   },
+  deleteText: {
+    color: 'red',
+    fontSize: 16,
+  },
   content: {
     flex: 1,
   },
@@ -149,7 +240,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: 12,
   },
   title: {
     fontSize: 24,
@@ -165,6 +256,20 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#fff',
     textTransform: 'capitalize',
+  },
+  metaRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 20,
+    flexWrap: 'wrap',
+  },
+  metaChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+  },
+  metaChipText: {
+    fontSize: 14,
   },
   section: {
     marginBottom: 24,
@@ -199,13 +304,35 @@ const styles = StyleSheet.create({
     fontSize: 16,
     lineHeight: 22,
   },
+  notesText: {
+    fontSize: 16,
+    lineHeight: 22,
+    fontStyle: 'italic',
+  },
+  actionsContainer: {
+    gap: 12,
+    marginTop: 20,
+  },
   saveButton: {
     padding: 16,
     borderRadius: 12,
     alignItems: 'center',
-    marginTop: 20,
   },
-  saveButtonText: {
+  cookedButton: {
+    padding: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  cookedInfoBanner: {
+    padding: 14,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  cookedInfoText: {
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  actionButtonText: {
     color: '#fff',
     fontSize: 18,
     fontWeight: 'bold',

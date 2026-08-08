@@ -1,6 +1,6 @@
-import { create } from 'zustand';
-import { Recipe, SavedRecipe } from '@/types';
 import { recipesService } from '@/services/recipesService';
+import { Recipe, SavedRecipe } from '@/types';
+import { create } from 'zustand';
 
 interface RecipesState {
   generatedRecipes: Recipe[];
@@ -11,14 +11,15 @@ interface RecipesState {
   selectedRecipe: Recipe | null;
   selectedRecipeSavedId: string | null;
   selectRecipe: (recipe: Recipe, savedId?: string | null) => void;
-  generateRecipes: (userId: string, ingredients: string[]) => void;
+  generateRecipes: (userId: string, ingredients: string[]) => Promise<void>;
   fetchSavedRecipes: (userId: string) => Promise<void>;
   saveRecipe: (userId: string, recipe: Recipe) => Promise<void>;
+  markAsCooked: (id: string) => Promise<void>;
   deleteSavedRecipe: (id: string) => Promise<void>;
   clearGenerated: () => void;
 }
 
-export const useRecipesStore = create<RecipesState>((set) => ({
+export const useRecipesStore = create<RecipesState>((set, get) => ({
   generatedRecipes: [],
   savedRecipes: [],
   loading: false,
@@ -28,10 +29,10 @@ export const useRecipesStore = create<RecipesState>((set) => ({
   selectedRecipeSavedId: null,
 
   selectRecipe: (recipe, savedId = null) => {
-    set({ selectedRecipe: recipe, selectedRecipeSavedId: savedId });
+    set({ selectedRecipe: recipe, selectedRecipeSavedId: savedId ?? null });
   },
 
-  generateRecipes: (userId: string, ingredients: string[]) => {
+  generateRecipes: async (userId: string, ingredients: string[]) => {
     if (ingredients.length === 0) {
       set({ error: 'Agrega algunos ingredientes a tu fridge primero' });
       return;
@@ -39,7 +40,8 @@ export const useRecipesStore = create<RecipesState>((set) => ({
 
     set({ generating: true, error: null });
     try {
-      const recipes = recipesService.generateRecipes(userId, { ingredients });
+      const recentTitles = await recipesService.getRecentCookedTitles(userId);
+      const recipes = recipesService.generateRecipes(userId, { ingredients }, recentTitles);
       set({ generatedRecipes: recipes, generating: false });
     } catch (error: any) {
       console.error('generateRecipes error:', error);
@@ -64,6 +66,21 @@ export const useRecipesStore = create<RecipesState>((set) => ({
       const saved = await recipesService.saveRecipe(userId, recipe);
       set((state) => ({
         savedRecipes: [saved, ...state.savedRecipes],
+        loading: false,
+      }));
+    } catch (error) {
+      set({ error: (error as Error).message, loading: false });
+    }
+  },
+
+  markAsCooked: async (id: string) => {
+    set({ loading: true, error: null });
+    try {
+      await recipesService.markAsCooked(id);
+      set((state) => ({
+        savedRecipes: state.savedRecipes.map((r) =>
+          r.id === id ? { ...r, last_cooked_at: new Date().toISOString() } : r
+        ),
         loading: false,
       }));
     } catch (error) {

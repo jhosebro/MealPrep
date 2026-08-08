@@ -1,4 +1,4 @@
-import { localRecipes, LocalRecipe } from '@/data/recipes';
+import { LocalRecipe, localRecipes } from '@/data/recipes';
 
 const COMMON_INGREDIENTS = ['sal', 'pimienta', 'aceite', 'mantequilla', 'ajo', 'cebolla', 'limón', 'canela'];
 
@@ -11,8 +11,9 @@ interface MatchResult {
 }
 
 export const recipesLocalService = {
-  generateRecipes(ingredients: string[]): LocalRecipe[] {
+  generateRecipes(ingredients: string[], recentTitles: string[] = []): LocalRecipe[] {
     const normalizedIngredients = ingredients.map(i => i.toLowerCase().trim());
+    const normalizedRecentTitles = recentTitles.map(t => t.toLowerCase());
     
     const results: MatchResult[] = localRecipes.map(recipe => {
       const recipeIngredients = recipe.ingredients.map(i => i.toLowerCase());
@@ -48,6 +49,7 @@ export const recipesLocalService = {
     const filtered = results
       .filter(r => r.missingEssential.length === 0)
       .filter(r => r.matchedIngredients.length >= 3)
+      .filter(r => !normalizedRecentTitles.includes(r.recipe.title.toLowerCase()))
       .sort((a, b) => b.matchPercentage - a.matchPercentage);
 
     const suggested: LocalRecipe[] = [];
@@ -75,6 +77,7 @@ export const recipesLocalService = {
           const fallbacks = results
             .filter(r => r.recipe.meal_type === type)
             .filter(r => r.matchedIngredients.length >= 2)
+            .filter(r => !normalizedRecentTitles.includes(r.recipe.title.toLowerCase()))
             .sort((a, b) => b.matchPercentage - a.matchPercentage);
           
           if (fallbacks.length > 0) {

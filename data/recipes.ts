@@ -2,6 +2,7 @@ export interface LocalRecipe {
   id: string;
   title: string;
   meal_type: 'desayuno' | 'almuerzo' | 'cena';
+  servings: number;
   ingredients: string[];
   missing_ingredients?: string[];
   steps: string[];
@@ -12,6 +13,7 @@ export const localRecipes: LocalRecipe[] = [
     id: '1',
     title: 'Huevos Revueltos',
     meal_type: 'desayuno',
+    servings: 1,
     ingredients: ['huevos', 'mantequilla', 'sal', 'pan'],
     steps: [
       'Bate los huevos con una pizca de sal',
@@ -25,6 +27,7 @@ export const localRecipes: LocalRecipe[] = [
     id: '2',
     title: 'Avena con Frutas',
     meal_type: 'desayuno',
+    servings: 1,
     ingredients: ['avena', 'leche', 'plátano', 'miel', 'canela'],
     steps: [
       'Hierve la leche en una olla',
@@ -38,6 +41,7 @@ export const localRecipes: LocalRecipe[] = [
     id: '3',
     title: 'Tostada con Aguacate',
     meal_type: 'desayuno',
+    servings: 1,
     ingredients: ['pan', 'aguacate', 'limón', 'sal', 'huevo'],
     steps: [
       'Tuesta el pan hasta que esté dorado',
@@ -51,6 +55,7 @@ export const localRecipes: LocalRecipe[] = [
     id: '4',
     title: 'Ensalada Caesar',
     meal_type: 'almuerzo',
+    servings: 2,
     ingredients: ['lechuga', 'pollo', 'queso', 'pan', 'mayonesa', 'limón'],
     steps: [
       'Lava y corta la lechuga en trozos',
@@ -64,6 +69,7 @@ export const localRecipes: LocalRecipe[] = [
     id: '5',
     title: 'Pasta con Tomate',
     meal_type: 'almuerzo',
+    servings: 2,
     ingredients: ['pasta', 'tomate', 'ajo', 'aceite', 'albahaca', 'queso'],
     steps: [
       'Cocina la pasta según las instrucciones',
@@ -77,6 +83,7 @@ export const localRecipes: LocalRecipe[] = [
     id: '6',
     title: 'Sándwich Mixto',
     meal_type: 'almuerzo',
+    servings: 2,
     ingredients: ['pan', 'queso', 'jamón', 'mantequilla', 'lechuga'],
     steps: [
       'Unta mantequilla en las rebanadas de pan',
@@ -90,6 +97,7 @@ export const localRecipes: LocalRecipe[] = [
     id: '7',
     title: 'Pechuga a la Plancha',
     meal_type: 'almuerzo',
+    servings: 2,
     ingredients: ['pollo', 'limón', 'ajo', 'sal', 'pimienta', 'arroz'],
     steps: [
       'Sazona la pechuga con sal, pimienta y ajo',
@@ -103,6 +111,7 @@ export const localRecipes: LocalRecipe[] = [
     id: '8',
     title: 'Omelette de Queso',
     meal_type: 'desayuno',
+    servings: 1,
     ingredients: ['huevos', 'queso', 'mantequilla', 'sal'],
     steps: [
       'Bate los huevos con sal',
@@ -116,6 +125,7 @@ export const localRecipes: LocalRecipe[] = [
     id: '9',
     title: 'Arroz con Pollo',
     meal_type: 'almuerzo',
+    servings: 2,
     ingredients: ['arroz', 'pollo', 'cebolla', 'ají', 'aceite', 'sal'],
     steps: [
       'Fría el pollo previamente sazonado',
@@ -129,6 +139,7 @@ export const localRecipes: LocalRecipe[] = [
     id: '10',
     title: 'Papas Fritas',
     meal_type: 'almuerzo',
+    servings: 2,
     ingredients: ['papa', 'aceite', 'sal'],
     steps: [
       'Pela y corta las papas en tiras',
@@ -142,6 +153,7 @@ export const localRecipes: LocalRecipe[] = [
     id: '11',
     title: 'Filete de Pescado',
     meal_type: 'cena',
+    servings: 2,
     ingredients: ['pescado', 'limón', 'ajo', 'sal', 'pimienta', 'aceite'],
     steps: [
       'Sazona el pescado con sal, pimienta y ajo',
@@ -155,6 +167,7 @@ export const localRecipes: LocalRecipe[] = [
     id: '12',
     title: 'Pollo al Horno',
     meal_type: 'cena',
+    servings: 2,
     ingredients: ['pollo', 'papa', 'cebolla', 'aceite', 'sal', 'romero'],
     steps: [
       'Precalienta el horno a 200°C',
@@ -168,6 +181,7 @@ export const localRecipes: LocalRecipe[] = [
     id: '13',
     title: 'Sopa de Verduras',
     meal_type: 'cena',
+    servings: 2,
     ingredients: ['zanahoria', 'papa', 'cebolla', 'apio', 'caldo', 'sal'],
     steps: [
       'Pica todas las verduras en trozos pequeños',
@@ -181,6 +195,7 @@ export const localRecipes: LocalRecipe[] = [
     id: '14',
     title: 'Carne con Papas',
     meal_type: 'cena',
+    servings: 2,
     ingredients: ['carne', 'papa', 'cebolla', 'ajo', 'aceite', 'sal'],
     steps: [
       'Corta la carne en trozos y sazona con sal',
@@ -194,6 +209,7 @@ export const localRecipes: LocalRecipe[] = [
     id: '15',
     title: 'Ensalada de Frutas',
     meal_type: 'desayuno',
+    servings: 1,
     ingredients: ['manzana', 'plátano', 'uva', 'naranja', 'miel'],
     steps: [
       'Lava y corta todas las frutas',
@@ -207,6 +223,7 @@ export const localRecipes: LocalRecipe[] = [
     id: '16',
     title: 'Hot Cakes',
     meal_type: 'desayuno',
+    servings: 1,
     ingredients: ['harina', 'huevo', 'leche', 'mantequilla', 'miel'],
     steps: [
       'Mezcla harina, huevo y leche hasta formar batter',
@@ -220,6 +237,7 @@ export const localRecipes: LocalRecipe[] = [
     id: '17',
     title: 'Frijoles con Huevo',
     meal_type: 'desayuno',
+    servings: 1,
     ingredients: ['frijoles', 'huevo', 'cebolla', 'chile', 'totopos'],
     steps: [
       'Calienta los frijoles en una olla',
@@ -233,6 +251,7 @@ export const localRecipes: LocalRecipe[] = [
     id: '18',
     title: 'Verduras Salteadas',
     meal_type: 'cena',
+    servings: 2,
     ingredients: ['brócoli', 'pimiento', 'zanahoria', 'ajo', 'aceite', 'soya'],
     steps: [
       'Corta todas las verduras en trozos',
@@ -246,6 +265,7 @@ export const localRecipes: LocalRecipe[] = [
     id: '19',
     title: 'Pasta con Queso',
     meal_type: 'almuerzo',
+    servings: 2,
     ingredients: ['pasta', 'queso', 'mantequilla', 'leche', 'sal'],
     steps: [
       'Cocina la pasta según las instrucciones',
@@ -259,6 +279,7 @@ export const localRecipes: LocalRecipe[] = [
     id: '20',
     title: 'Huevo Frito con Tocino',
     meal_type: 'desayuno',
+    servings: 1,
     ingredients: ['huevo', 'tocino', 'mantequilla', 'sal'],
     steps: [
       'Cocina el tocino hasta que esté crujiente',

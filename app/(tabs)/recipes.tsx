@@ -7,13 +7,13 @@ import { Recipe } from "@/types";
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import {
-  ActivityIndicator,
-  Alert,
-  FlatList,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Alert,
+    FlatList,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from "react-native";
 
 export default function RecipesScreen() {
@@ -79,13 +79,25 @@ export default function RecipesScreen() {
     router.push("/recipes/detail" as any);
   };
 
-  const renderRecipe = (
-    recipe: Recipe,
-    isSaved: boolean = false,
-    savedId?: string,
-  ) => (
+  const navigateToCreate = () => {
+    router.push("/recipes/create" as any);
+  };
+
+  const getMealTypeColor = (type: string) => {
+    switch (type) {
+      case "desayuno":
+        return "#FFB347";
+      case "almuerzo":
+        return "#77DD77";
+      case "cena":
+        return "#CB99C9";
+      default:
+        return "#999";
+    }
+  };
+
+  const renderRecipeCard = (recipe: Recipe, isSaved: boolean = false, savedId?: string) => (
     <TouchableOpacity
-      key={isSaved ? savedId : recipe.title}
       style={[styles.recipeCard, { backgroundColor: colors.card }]}
       onPress={() => navigateToDetail(recipe, isSaved, savedId)}
     >
@@ -102,6 +114,23 @@ export default function RecipesScreen() {
           <Text style={styles.mealTypeText}>{recipe.meal_type}</Text>
         </View>
       </View>
+      <View style={styles.recipeMetaRow}>
+        {recipe.servings && (
+          <Text style={[styles.recipeMeta, { color: colors.textSecondary }]}>
+            🍽 {recipe.servings} {recipe.servings === 1 ? 'porción' : 'porciones'}
+          </Text>
+        )}
+        {recipe.prep_time_minutes && (
+          <Text style={[styles.recipeMeta, { color: colors.textSecondary }]}>
+            ⏱ {recipe.prep_time_minutes} min
+          </Text>
+        )}
+        {recipe.difficulty && (
+          <Text style={[styles.recipeMeta, { color: colors.textSecondary }]}>
+            📊 {recipe.difficulty}
+          </Text>
+        )}
+      </View>
       <Text style={[styles.recipeIngredients, { color: colors.textSecondary }]}>
         {recipe.ingredients.slice(0, 3).join(", ")}
         {recipe.ingredients.length > 3 ? "..." : ""}
@@ -117,19 +146,6 @@ export default function RecipesScreen() {
     </TouchableOpacity>
   );
 
-  const getMealTypeColor = (type: string) => {
-    switch (type) {
-      case "desayuno":
-        return "#FFB347";
-      case "almuerzo":
-        return "#77DD77";
-      case "cena":
-        return "#CB99C9";
-      default:
-        return "#999";
-    }
-  };
-
   const suggestedData = generatedRecipes.length > 0 ? generatedRecipes : [];
   const savedData = savedRecipes.map((s) => ({
     recipe: s.recipe_data,
@@ -140,6 +156,12 @@ export default function RecipesScreen() {
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={styles.header}>
         <Text style={[styles.title, { color: colors.text }]}>Recetas</Text>
+        <TouchableOpacity
+          style={[styles.addButton, { backgroundColor: colors.primary }]}
+          onPress={navigateToCreate}
+        >
+          <Text style={styles.addButtonText}>+</Text>
+        </TouchableOpacity>
       </View>
 
       <View style={styles.tabContainer}>
@@ -201,7 +223,7 @@ export default function RecipesScreen() {
             <FlatList
               data={suggestedData}
               keyExtractor={(item, index) => `suggested-${index}`}
-              renderItem={({ item }) => renderRecipe(item, false)}
+              renderItem={({ item }) => renderRecipeCard(item, false)}
               contentContainerStyle={styles.list}
             />
           ) : (
@@ -218,13 +240,13 @@ export default function RecipesScreen() {
           data={savedData}
           keyExtractor={(item) => item.savedId}
           renderItem={({ item }) =>
-            renderRecipe(item.recipe, true, item.savedId)
+            renderRecipeCard(item.recipe, true, item.savedId)
           }
           contentContainerStyle={styles.list}
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
               <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
-                No ten&eacute;s recetas guardadas
+                No tenés recetas guardadas
               </Text>
             </View>
           }
@@ -239,6 +261,9 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     paddingHorizontal: 16,
     paddingTop: 60,
     paddingBottom: 16,
@@ -246,6 +271,19 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: "bold",
+  },
+  addButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  addButtonText: {
+    color: "#fff",
+    fontSize: 24,
+    fontWeight: "bold",
+    marginTop: -2,
   },
   tabContainer: {
     flexDirection: "row",
@@ -293,7 +331,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 8,
+    marginBottom: 6,
   },
   recipeTitle: {
     fontSize: 18,
@@ -309,6 +347,14 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: "#fff",
     textTransform: "capitalize",
+  },
+  recipeMetaRow: {
+    flexDirection: "row",
+    gap: 12,
+    marginBottom: 8,
+  },
+  recipeMeta: {
+    fontSize: 13,
   },
   recipeIngredients: {
     fontSize: 14,
