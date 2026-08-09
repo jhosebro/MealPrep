@@ -6,14 +6,15 @@ import { CATEGORIES, FridgeItem, Status } from "@/types";
 import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
 import {
-  Alert,
-  RefreshControl,
-  ScrollView,
-  SectionList,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
+    Alert,
+    RefreshControl,
+    ScrollView,
+    SectionList,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -31,6 +32,9 @@ export default function FridgeScreen() {
   const { items, fetchItems, deleteItem } = useFridgeStore();
   const [refreshing, setRefreshing] = useState(false);
   const [selectedCat, setSelectedCat] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const normalizedQuery = useMemo(() => searchQuery.trim().toLowerCase(), [searchQuery]);
 
   const sections = useMemo(() => {
     return CATEGORIES.map((cat) => ({
@@ -40,9 +44,20 @@ export default function FridgeScreen() {
   }, [items]);
 
   const filteredSections = useMemo(() => {
-    if (!selectedCat) return sections;
-    return sections.filter((s) => s.title === selectedCat);
-  }, [sections, selectedCat]);
+    let result = sections;
+    if (selectedCat) {
+      result = result.filter((s) => s.title === selectedCat);
+    }
+    if (normalizedQuery) {
+      result = result
+        .map((s) => ({
+          ...s,
+          data: s.data.filter((i) => i.name.toLowerCase().includes(normalizedQuery)),
+        }))
+        .filter((s) => s.data.length > 0);
+    }
+    return result;
+  }, [sections, selectedCat, normalizedQuery]);
 
   const catTabItems = useMemo(() => {
     const counts = new Map<string, number>();
@@ -121,6 +136,26 @@ export default function FridgeScreen() {
         </TouchableOpacity>
       </View>
 
+      <View style={styles.searchContainer}>
+        <TextInput
+          style={[styles.searchInput, { backgroundColor: colors.card, color: colors.text }]}
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+          placeholder="Buscar alimento..."
+          placeholderTextColor={colors.textSecondary}
+          clearButtonMode="while-editing"
+          autoCorrect={false}
+        />
+        {searchQuery.length > 0 && (
+          <TouchableOpacity
+            style={styles.clearButton}
+            onPress={() => setSearchQuery("")}
+          >
+            <Text style={[styles.clearButtonText, { color: colors.textSecondary }]}>✕</Text>
+          </TouchableOpacity>
+        )}
+      </View>
+
       {items.length > 0 && (
         <ScrollView
           horizontal
@@ -177,7 +212,9 @@ export default function FridgeScreen() {
       {items.length > 0 && filteredSections.length === 0 && (
         <View style={styles.emptyCategory}>
           <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
-            No hay items en esta categoría
+            {normalizedQuery
+              ? `No se encontró "${searchQuery.trim()}"`
+              : "No hay items en esta categoría"}
           </Text>
         </View>
       )}
@@ -239,6 +276,27 @@ const styles = StyleSheet.create({
     fontSize: 24,
     color: "#fff",
     fontWeight: "bold",
+  },
+  searchContainer: {
+    paddingHorizontal: 16,
+    marginBottom: 12,
+    position: "relative",
+    justifyContent: "center",
+  },
+  searchInput: {
+    padding: 14,
+    paddingRight: 40,
+    borderRadius: 10,
+    fontSize: 16,
+  },
+  clearButton: {
+    position: "absolute",
+    right: 28,
+    padding: 6,
+  },
+  clearButtonText: {
+    fontSize: 16,
+    fontWeight: "600",
   },
   list: {
     paddingBottom: 100,
