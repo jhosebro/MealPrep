@@ -1,17 +1,17 @@
-import { useEffect, useMemo, useState } from 'react';
-import { View, Text, FlatList, TouchableOpacity, StyleSheet, Modal, Switch, Alert } from 'react-native';
-import { useRouter } from 'expo-router';
+import { Colors } from '@/constants/theme';
+import { useColorScheme } from '@/hooks/use-color-scheme';
+import { biometricService } from '@/services/biometricService';
 import { useAuthStore } from '@/stores/authStore';
 import { useFridgeStore } from '@/stores/fridgeStore';
 import { useRecipesStore } from '@/stores/recipesStore';
-import { useColorScheme } from '@/hooks/use-color-scheme';
-import { Colors } from '@/constants/theme';
-import { biometricService } from '@/services/biometricService';
+import { useRouter } from 'expo-router';
+import { useEffect, useMemo, useState } from 'react';
+import { Alert, FlatList, Modal, Platform, StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
 
 export default function HomeScreen() {
   const router = useRouter();
   const colorScheme = useColorScheme();
-  const colors = Colors[colorScheme ?? 'light'];
+  const colors = Colors[(colorScheme ?? 'light') as keyof typeof Colors];
   const { user, signOut } = useAuthStore();
   const { items, fetchItems } = useFridgeStore();
   const { generateRecipes, generatedRecipes } = useRecipesStore();
@@ -66,18 +66,26 @@ export default function HomeScreen() {
   };
 
   const handleSignOut = () => {
-    Alert.alert('Cerrar sesión', '¿Estás seguro de cerrar sesión?', [
-      { text: 'Cancelar', style: 'cancel' },
-      {
-        text: 'Cerrar sesión',
-        style: 'destructive',
-        onPress: async () => {
-          await signOut();
-          // @ts-ignore
-          router.replace('/login');
+    const doSignOut = async () => {
+      await signOut();
+      router.replace('/login' as any);
+    };
+
+    if (Platform.OS === 'web') {
+      const confirmed = window.confirm('¿Estás seguro de cerrar sesión?');
+      if (confirmed) {
+        doSignOut();
+      }
+    } else {
+      Alert.alert('Cerrar sesión', '¿Estás seguro de cerrar sesión?', [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Cerrar sesión',
+          style: 'destructive',
+          onPress: doSignOut,
         },
-      },
-    ]);
+      ]);
+    }
   };
 
   return (

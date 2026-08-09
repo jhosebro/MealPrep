@@ -7,17 +7,17 @@ import * as Clipboard from "expo-clipboard";
 import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
 import {
-    Alert,
-    Platform,
-    RefreshControl,
-    ScrollView,
-    SectionList,
-    Share,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View
+  Alert,
+  Platform,
+  RefreshControl,
+  ScrollView,
+  SectionList,
+  Share,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -30,7 +30,7 @@ const statusColor: Record<Status, string> = {
 export default function FridgeScreen() {
   const router = useRouter();
   const colorScheme = useColorScheme();
-  const colors = Colors[colorScheme ?? "light"];
+  const colors = Colors[(colorScheme ?? "light") as keyof typeof Colors];
   const { user } = useAuthStore();
   const { items, fetchItems, deleteItem } = useFridgeStore();
   const [refreshing, setRefreshing] = useState(false);
