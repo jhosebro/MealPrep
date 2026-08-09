@@ -3,18 +3,21 @@ import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useAuthStore } from "@/stores/authStore";
 import { useFridgeStore } from "@/stores/fridgeStore";
 import { CATEGORIES, FridgeItem, Status } from "@/types";
+import * as Clipboard from "expo-clipboard";
 import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
 import {
     Alert,
+    Platform,
     RefreshControl,
     ScrollView,
     SectionList,
+    Share,
     StyleSheet,
     Text,
     TextInput,
     TouchableOpacity,
-    View,
+    View
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -89,6 +92,35 @@ export default function FridgeScreen() {
     ]);
   };
 
+  const handleExportJSON = async () => {
+    if (items.length === 0) {
+      Alert.alert("Sin datos", "No hay alimentos para exportar");
+      return;
+    }
+
+    const summary = items.map((item) => ({
+      nombre: item.name,
+      fecha_compra: item.purchase_date,
+    }));
+
+    const json = JSON.stringify(summary, null, 2);
+
+    if (Platform.OS === "web") {
+      await Clipboard.setStringAsync(json);
+      Alert.alert("Copiado", "El JSON fue copiado al portapapeles");
+    } else {
+      try {
+        await Share.share({
+          message: json,
+          title: "Mi Despensa - Inventario",
+        });
+      } catch (error) {
+        await Clipboard.setStringAsync(json);
+        Alert.alert("Copiado", "El JSON fue copiado al portapapeles");
+      }
+    }
+  };
+
   const renderItem = ({ item }: { item: FridgeItem }) => (
     <TouchableOpacity
       style={[styles.itemCard, { backgroundColor: colors.card }]}
@@ -128,12 +160,20 @@ export default function FridgeScreen() {
     <>
       <View style={styles.header}>
         <Text style={[styles.title, { color: colors.text }]}>Mi Despensa</Text>
-        <TouchableOpacity
-          style={[styles.addButton, { backgroundColor: colors.primary }]}
-          onPress={() => router.push("/fridge/add" as any)}
-        >
-          <Text style={styles.addButtonText}>+</Text>
-        </TouchableOpacity>
+        <View style={styles.headerActions}>
+          <TouchableOpacity
+            style={[styles.exportButton, { backgroundColor: colors.card }]}
+            onPress={handleExportJSON}
+          >
+            <Text style={[styles.exportButtonText, { color: colors.primary }]}>↗ Exportar</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.addButton, { backgroundColor: colors.primary }]}
+            onPress={() => router.push("/fridge/add" as any)}
+          >
+            <Text style={styles.addButtonText}>+</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       <View style={styles.searchContainer}>
@@ -276,6 +316,22 @@ const styles = StyleSheet.create({
     fontSize: 24,
     color: "#fff",
     fontWeight: "bold",
+  },
+  headerActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  exportButton: {
+    paddingHorizontal: 12,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  exportButtonText: {
+    fontSize: 14,
+    fontWeight: "700",
   },
   searchContainer: {
     paddingHorizontal: 16,
