@@ -98,10 +98,12 @@ export default function FridgeScreen() {
       return;
     }
 
-    const summary = items.map((item) => ({
-      nombre: item.name,
-      fecha_compra: item.purchase_date,
-    }));
+    const summary = items
+      .filter((item) => item.status !== "empty")
+      .map((item) => ({
+        nombre: item.name,
+        fecha_compra: item.purchase_date,
+      }));
 
     const json = JSON.stringify(summary, null, 2);
 
