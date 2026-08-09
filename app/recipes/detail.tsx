@@ -3,7 +3,34 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useAuthStore } from '@/stores/authStore';
 import { useRecipesStore } from '@/stores/recipesStore';
 import { useRouter } from 'expo-router';
-import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+
+const showAlert = (title: string, message: string) => {
+  if (Platform.OS === 'web') {
+    window.alert(`${title}\n${message}`);
+  } else {
+    const { Alert } = require('react-native');
+    Alert.alert(title, message);
+  }
+};
+
+const showConfirm = (
+  title: string,
+  message: string,
+  onConfirm: () => void,
+  confirmText = 'Confirmar',
+) => {
+  if (Platform.OS === 'web') {
+    const confirmed = window.confirm(`${title}\n${message}`);
+    if (confirmed) onConfirm();
+  } else {
+    const { Alert } = require('react-native');
+    Alert.alert(title, message, [
+      { text: 'Cancelar', style: 'cancel' },
+      { text: confirmText, onPress: onConfirm },
+    ]);
+  }
+};
 
 const formatDate = (dateStr: string): string => {
   const date = new Date(dateStr);
@@ -19,7 +46,7 @@ const formatDate = (dateStr: string): string => {
 export default function RecipeDetailScreen() {
   const router = useRouter();
   const colorScheme = useColorScheme();
-  const colors = Colors[colorScheme ?? 'light'];
+  const colors = Colors[(colorScheme ?? 'light') as keyof typeof Colors];
   const { user } = useAuthStore();
   const { selectedRecipe, selectedRecipeSavedId, savedRecipes, saveRecipe, markAsCooked, deleteSavedRecipe, loading } = useRecipesStore();
 
@@ -29,43 +56,32 @@ export default function RecipeDetailScreen() {
   const handleSave = async () => {
     if (!user || !selectedRecipe) return;
     await saveRecipe(user.id, selectedRecipe);
-    Alert.alert('Éxito', 'Receta guardada');
+    showAlert('Éxito', 'Receta guardada');
   };
 
   const handleMarkCooked = () => {
     if (!selectedRecipeSavedId) return;
-    Alert.alert(
+    showConfirm(
       '¿Ya la preparaste?',
       'Se marcará como preparada y no se sugerirá en los próximos 7 días.',
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Sí, la preparé',
-          onPress: async () => {
-            await markAsCooked(selectedRecipeSavedId);
-            Alert.alert('Listo', '¡Buen provecho! 🍽');
-          },
-        },
-      ]
+      async () => {
+        await markAsCooked(selectedRecipeSavedId);
+        showAlert('Listo', '¡Buen provecho! 🍽');
+      },
+      'Sí, la preparé',
     );
   };
 
   const handleDelete = () => {
     if (!selectedRecipeSavedId) return;
-    Alert.alert(
+    showConfirm(
       'Eliminar receta',
       '¿Estás seguro de eliminar esta receta?',
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Eliminar',
-          style: 'destructive',
-          onPress: async () => {
-            await deleteSavedRecipe(selectedRecipeSavedId);
-            router.back();
-          },
-        },
-      ]
+      async () => {
+        await deleteSavedRecipe(selectedRecipeSavedId);
+        router.back();
+      },
+      'Eliminar',
     );
   };
 
@@ -84,6 +100,8 @@ export default function RecipeDetailScreen() {
       case 'desayuno': return '#FFB347';
       case 'almuerzo': return '#77DD77';
       case 'cena': return '#CB99C9';
+      case 'merienda': return '#87CEEB';
+      case 'snack': return '#F0E68C';
       default: return '#999';
     }
   };
