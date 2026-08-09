@@ -7,14 +7,15 @@ import { CATEGORIES, FridgeItem, Status, STORES, UNITS } from "@/types";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import {
-    Alert,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  Alert,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
+import CurrencyInput from "react-native-currency-input";
 
 export default function EditItemScreen() {
   const router = useRouter();
@@ -298,16 +299,17 @@ export default function EditItemScreen() {
 
         <View style={styles.field}>
           <Text style={[styles.label, { color: colors.text }]}>Valor</Text>
-          <TextInput
+          <CurrencyInput
+            value={parseFloat(price)}
+            onChangeValue={(parse) => setPrice(parse ? parse.toString() : "")}
+            prefix="$ "
+            delimiter="."
+            separator=","
+            precision={0}
             style={[
               styles.input,
               { backgroundColor: colors.card, color: colors.text },
             ]}
-            value={price}
-            onChangeText={setPrice}
-            keyboardType="decimal-pad"
-            placeholder="$ 0.00"
-            placeholderTextColor={colors.textSecondary}
           />
         </View>
 
