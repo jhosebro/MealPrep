@@ -24,10 +24,10 @@ export interface User {
   email?: string;
 }
 
-export type MealType = "desayuno" | "almuerzo" | "cena";
+export type MealType = "desayuno" | "almuerzo" | "cena" | "merienda" | "snack";
 export type Difficulty = "fácil" | "media" | "difícil";
 
-export const MEAL_TYPES: MealType[] = ["desayuno", "almuerzo", "cena"] as const;
+export const MEAL_TYPES: MealType[] = ["desayuno", "almuerzo", "cena", "merienda", "snack"] as const;
 export const DIFFICULTIES: Difficulty[] = ["fácil", "media", "difícil"] as const;
 
 export interface Recipe {

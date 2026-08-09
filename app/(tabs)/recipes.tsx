@@ -7,19 +7,19 @@ import { Recipe } from "@/types";
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    FlatList,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  FlatList,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 
 export default function RecipesScreen() {
   const router = useRouter();
   const colorScheme = useColorScheme();
-  const colors = Colors[colorScheme ?? "light"];
+  const colors = Colors[(colorScheme ?? "light") as keyof typeof Colors];
   const { user } = useAuthStore();
   const { getIngredientNames } = useFridgeStore();
   const {
@@ -91,6 +91,10 @@ export default function RecipesScreen() {
         return "#77DD77";
       case "cena":
         return "#CB99C9";
+      case "merienda":
+        return "#87CEEB";
+      case "snack":
+        return "#F0E68C";
       default:
         return "#999";
     }

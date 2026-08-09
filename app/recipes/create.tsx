@@ -14,7 +14,6 @@ import * as Clipboard from 'expo-clipboard';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
-    Alert,
     KeyboardAvoidingView,
     Platform,
     ScrollView,
@@ -24,6 +23,15 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
+
+const showAlert = (title: string, message: string) => {
+  if (Platform.OS === 'web') {
+    window.alert(`${title}\n${message}`);
+  } else {
+    const { Alert } = require('react-native');
+    Alert.alert(title, message);
+  }
+};
 
 type CreateMode = 'manual' | 'json';
 
@@ -51,24 +59,24 @@ export default function CreateRecipeScreen() {
 
   const handleCopyTemplate = async () => {
     await Clipboard.setStringAsync(RECIPE_JSON_TEMPLATE);
-    Alert.alert('Copiado', 'Plantilla JSON copiada al portapapeles');
+    showAlert('Copiado', 'Plantilla JSON copiada al portapapeles');
   };
 
   const validateRecipe = (recipe: any): Recipe | null => {
     if (!recipe.title || typeof recipe.title !== 'string') {
-      Alert.alert('Error', 'El campo "title" es requerido y debe ser texto');
+      showAlert('Error', 'El campo "title" es requerido y debe ser texto');
       return null;
     }
     if (!MEAL_TYPES.includes(recipe.meal_type)) {
-      Alert.alert('Error', `"meal_type" debe ser: ${MEAL_TYPES.join(', ')}`);
+      showAlert('Error', `"meal_type" debe ser: ${MEAL_TYPES.join(', ')}`);
       return null;
     }
     if (!Array.isArray(recipe.ingredients) || recipe.ingredients.length === 0) {
-      Alert.alert('Error', '"ingredients" debe ser un array con al menos 1 elemento');
+      showAlert('Error', '"ingredients" debe ser un array con al menos 1 elemento');
       return null;
     }
     if (!Array.isArray(recipe.steps) || recipe.steps.length === 0) {
-      Alert.alert('Error', '"steps" debe ser un array con al menos 1 paso');
+      showAlert('Error', '"steps" debe ser un array con al menos 1 paso');
       return null;
     }
 
@@ -88,13 +96,13 @@ export default function CreateRecipeScreen() {
 
   const handleSaveJson = async () => {
     if (!user) {
-      Alert.alert('Error', 'Debes iniciar sesión');
+      showAlert('Error', 'Debes iniciar sesión');
       return;
     }
 
     const trimmed = jsonText.trim();
     if (!trimmed) {
-      Alert.alert('Error', 'Pega el JSON de la receta');
+      showAlert('Error', 'Pega el JSON de la receta');
       return;
     }
 
@@ -102,7 +110,7 @@ export default function CreateRecipeScreen() {
     try {
       parsed = JSON.parse(trimmed);
     } catch {
-      Alert.alert('Error', 'El JSON no es válido. Revisa el formato.');
+      showAlert('Error', 'El JSON no es válido. Revisa el formato.');
       return;
     }
 
@@ -111,17 +119,17 @@ export default function CreateRecipeScreen() {
 
     await saveRecipe(user.id, recipe);
     router.back();
-    Alert.alert('Éxito', 'Receta guardada');
+    showAlert('Éxito', 'Receta guardada');
   };
 
   const handleSaveManual = async () => {
     if (!user) {
-      Alert.alert('Error', 'Debes iniciar sesión');
+      showAlert('Error', 'Debes iniciar sesión');
       return;
     }
 
     if (!title.trim()) {
-      Alert.alert('Error', 'El nombre de la receta es requerido');
+      showAlert('Error', 'El nombre de la receta es requerido');
       return;
     }
 
@@ -130,7 +138,7 @@ export default function CreateRecipeScreen() {
       .map((l) => l.trim())
       .filter(Boolean);
     if (ingredients.length === 0) {
-      Alert.alert('Error', 'Agrega al menos un ingrediente');
+      showAlert('Error', 'Agrega al menos un ingrediente');
       return;
     }
 
@@ -139,7 +147,7 @@ export default function CreateRecipeScreen() {
       .map((l) => l.trim())
       .filter(Boolean);
     if (steps.length === 0) {
-      Alert.alert('Error', 'Agrega al menos un paso');
+      showAlert('Error', 'Agrega al menos un paso');
       return;
     }
 
@@ -156,7 +164,7 @@ export default function CreateRecipeScreen() {
 
     await saveRecipe(user.id, recipe);
     router.back();
-    Alert.alert('Éxito', 'Receta guardada');
+    showAlert('Éxito', 'Receta guardada');
   };
 
   const renderModeToggle = () => (
