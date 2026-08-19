@@ -1,102 +1,75 @@
-import { LocalRecipe, localRecipes } from '@/data/recipes';
+import { Recipe, SavedRecipe } from '@/types';
 
-const COMMON_INGREDIENTS = ['sal', 'pimienta', 'aceite', 'mantequilla', 'ajo', 'cebolla', 'limón', 'canela'];
+const COMMON_INGREDIENTS = ['sal', 'pimienta', 'aceite', 'mantequilla', 'ajo', 'cebolla', 'limón', 'canela', 'agua'];
+
+const MAX_MISSING_ALLOWED = 2;
 
 interface MatchResult {
-  recipe: LocalRecipe;
+  savedRecipe: SavedRecipe;
+  recipe: Recipe;
   matchedIngredients: string[];
-  essentialIngredients: string[];
-  missingEssential: string[];
+  missingIngredients: string[];
   matchPercentage: number;
 }
 
+export interface SuggestRecipesParams {
+  ingredients: string[];
+  mealTypeFilter?: string | null;
+  maxMissing?: number;
+}
+
 export const recipesLocalService = {
-  generateRecipes(ingredients: string[], recentTitles: string[] = []): LocalRecipe[] {
+  /**
+   * Suggests recipes from the user's saved recipes based on current fridge ingredients.
+   * Allows up to `maxMissing` essential ingredients to be missing (default: 2).
+   */
+  suggestFromSaved(savedRecipes: SavedRecipe[], params: SuggestRecipesParams): MatchResult[] {
+    const { ingredients, mealTypeFilter, maxMissing = MAX_MISSING_ALLOWED } = params;
     const normalizedIngredients = ingredients.map(i => i.toLowerCase().trim());
-    const normalizedRecentTitles = recentTitles.map(t => t.toLowerCase());
-    
-    const results: MatchResult[] = localRecipes.map(recipe => {
-      const recipeIngredients = recipe.ingredients.map(i => i.toLowerCase());
-      
-      const matched = recipeIngredients.filter(ing => 
-        normalizedIngredients.some(userIng => 
+
+    const results: MatchResult[] = savedRecipes.map(saved => {
+      const recipe = saved.recipe_data;
+      const recipeIngredients = recipe.ingredients.map(i => i.toLowerCase().trim());
+
+      const matched = recipeIngredients.filter(ing =>
+        normalizedIngredients.some(userIng =>
           userIng.includes(ing) || ing.includes(userIng)
-        )
+        ) || COMMON_INGREDIENTS.includes(ing)
       );
 
-      const essential = recipeIngredients.filter(ing => 
-        !COMMON_INGREDIENTS.includes(ing)
-      );
+      const missing = recipeIngredients.filter(ing => !matched.includes(ing));
 
-      const missingEssential = essential.filter(ing => 
-        !matched.includes(ing)
-      );
-
-      const matchPercentage = (matched.length / recipeIngredients.length) * 100;
-      const essentialMatchPercentage = essential.length > 0 
-        ? ((essential.length - missingEssential.length) / essential.length) * 100 
+      const matchPercentage = recipeIngredients.length > 0
+        ? (matched.length / recipeIngredients.length) * 100
         : 0;
-      
+
       return {
-        recipe,
+        savedRecipe: saved,
+        recipe: {
+          ...recipe,
+          missing_ingredients: missing,
+        },
         matchedIngredients: matched,
-        essentialIngredients: essential,
-        missingEssential,
-        matchPercentage: essentialMatchPercentage
+        missingIngredients: missing,
+        matchPercentage,
       };
     });
 
-    const filtered = results
-      .filter(r => r.missingEssential.length === 0)
-      .filter(r => r.matchedIngredients.length >= 3)
-      .filter(r => !normalizedRecentTitles.includes(r.recipe.title.toLowerCase()))
-      .sort((a, b) => b.matchPercentage - a.matchPercentage);
+    let filtered = results
+      .filter(r => r.missingIngredients.length <= maxMissing)
+      .filter(r => r.matchedIngredients.length >= 1);
 
-    const suggested: LocalRecipe[] = [];
-    const seen = new Set<string>();
-
-    for (const r of filtered) {
-      if (!seen.has(r.recipe.meal_type)) {
-        seen.add(r.recipe.meal_type);
-        suggested.push({
-          ...r.recipe,
-          missing_ingredients: r.recipe.ingredients
-            .filter(ing => !r.matchedIngredients.includes(ing.toLowerCase()))
-        });
-        
-        if (suggested.length === 3) break;
-      }
+    if (mealTypeFilter) {
+      filtered = filtered.filter(r => r.recipe.meal_type === mealTypeFilter);
     }
 
-    if (suggested.length < 3) {
-      const mealTypes: LocalRecipe['meal_type'][] = ['desayuno', 'almuerzo', 'cena'];
-      const currentTypes = new Set(suggested.map(r => r.meal_type));
-      
-      for (const type of mealTypes) {
-        if (!currentTypes.has(type)) {
-          const fallbacks = results
-            .filter(r => r.recipe.meal_type === type)
-            .filter(r => r.matchedIngredients.length >= 2)
-            .filter(r => !normalizedRecentTitles.includes(r.recipe.title.toLowerCase()))
-            .sort((a, b) => b.matchPercentage - a.matchPercentage);
-          
-          if (fallbacks.length > 0) {
-            const fallback = fallbacks[0];
-            suggested.push({
-              ...fallback.recipe,
-              missing_ingredients: fallback.recipe.ingredients
-                .filter(ing => !fallback.matchedIngredients.includes(ing.toLowerCase()))
-            });
-            if (suggested.length === 3) break;
-          }
-        }
+    filtered.sort((a, b) => {
+      if (a.missingIngredients.length !== b.missingIngredients.length) {
+        return a.missingIngredients.length - b.missingIngredients.length;
       }
-    }
+      return b.matchPercentage - a.matchPercentage;
+    });
 
-    return suggested;
+    return filtered;
   },
-
-  getAllRecipes(): LocalRecipe[] {
-    return localRecipes;
-  }
 };

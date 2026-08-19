@@ -14,7 +14,7 @@ export default function HomeScreen() {
   const colors = Colors[(colorScheme ?? 'light') as keyof typeof Colors];
   const { user, signOut } = useAuthStore();
   const { items, fetchItems } = useFridgeStore();
-  const { generateRecipes, generatedRecipes } = useRecipesStore();
+  const { suggestRecipes, fetchSavedRecipes } = useRecipesStore();
   const [loading, setLoading] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [biometricEnabled, setBiometricEnabled] = useState(false);
@@ -44,10 +44,9 @@ export default function HomeScreen() {
     if (!user || ingredientNames.length === 0) return;
     setLoading(true);
     try {
-      await generateRecipes(user.id, ingredientNames);
-      if (generatedRecipes.length > 0) {
-        router.push('/(tabs)/recipes');
-      }
+      await fetchSavedRecipes(user.id);
+      suggestRecipes(ingredientNames);
+      router.push('/(tabs)/recipes');
     } finally {
       setLoading(false);
     }

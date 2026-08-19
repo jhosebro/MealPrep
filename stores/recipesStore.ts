@@ -1,52 +1,74 @@
-import { recipesService } from '@/services/recipesService';
-import { Recipe, SavedRecipe } from '@/types';
+import { recipesService, SuggestedRecipe } from '@/services/recipesService';
+import { MealType, Recipe, SavedRecipe } from '@/types';
 import { create } from 'zustand';
 
 interface RecipesState {
-  generatedRecipes: Recipe[];
+  suggestedRecipes: SuggestedRecipe[];
   savedRecipes: SavedRecipe[];
   loading: boolean;
-  generating: boolean;
+  suggesting: boolean;
   error: string | null;
   selectedRecipe: Recipe | null;
   selectedRecipeSavedId: string | null;
+  mealTypeFilter: MealType | null;
   selectRecipe: (recipe: Recipe, savedId?: string | null) => void;
-  generateRecipes: (userId: string, ingredients: string[]) => Promise<void>;
+  setMealTypeFilter: (filter: MealType | null) => void;
+  suggestRecipes: (ingredients: string[]) => void;
   fetchSavedRecipes: (userId: string) => Promise<void>;
   saveRecipe: (userId: string, recipe: Recipe) => Promise<void>;
   markAsCooked: (id: string) => Promise<void>;
   deleteSavedRecipe: (id: string) => Promise<void>;
-  clearGenerated: () => void;
+  clearSuggestions: () => void;
+  getAIPromptUrl: (ingredients: string[]) => string;
 }
 
 export const useRecipesStore = create<RecipesState>((set, get) => ({
-  generatedRecipes: [],
+  suggestedRecipes: [],
   savedRecipes: [],
   loading: false,
-  generating: false,
+  suggesting: false,
   error: null,
   selectedRecipe: null,
   selectedRecipeSavedId: null,
+  mealTypeFilter: null,
 
   selectRecipe: (recipe, savedId = null) => {
     set({ selectedRecipe: recipe, selectedRecipeSavedId: savedId ?? null });
   },
 
-  generateRecipes: async (userId: string, ingredients: string[]) => {
-    if (ingredients.length === 0) {
-      set({ error: 'Agrega algunos ingredientes a tu fridge primero' });
+  setMealTypeFilter: (filter: MealType | null) => {
+    set({ mealTypeFilter: filter });
+    const { savedRecipes } = get();
+    if (savedRecipes.length > 0) {
+      // Re-run suggestions with new filter if we have ingredients context
+      // This will be triggered from the component
+    }
+  },
+
+  suggestRecipes: (ingredients: string[]) => {
+    const { savedRecipes, mealTypeFilter } = get();
+
+    if (savedRecipes.length === 0) {
+      set({ suggestedRecipes: [], error: null });
       return;
     }
 
-    set({ generating: true, error: null });
+    if (ingredients.length === 0) {
+      set({ error: 'Agrega algunos ingredientes a tu nevera primero' });
+      return;
+    }
+
+    set({ suggesting: true, error: null });
     try {
-      const recentTitles = await recipesService.getRecentCookedTitles(userId);
-      const recipes = recipesService.generateRecipes(userId, { ingredients }, recentTitles);
-      set({ generatedRecipes: recipes, generating: false });
+      const suggestions = recipesService.suggestRecipes(savedRecipes, {
+        ingredients,
+        mealTypeFilter,
+      });
+      set({ suggestedRecipes: suggestions, suggesting: false });
     } catch (error: any) {
-      console.error('generateRecipes error:', error);
-      const errorMessage = error?.message || 'Error al generar recetas';
-      set({ error: errorMessage, generating: false });
+      console.error('suggestRecipes error:', error);
+      const errorMessage = error?.message || 'Error al buscar sugerencias';
+      set({ error: errorMessage, suggesting: false });
     }
   },
 
@@ -101,7 +123,12 @@ export const useRecipesStore = create<RecipesState>((set, get) => ({
     }
   },
 
-  clearGenerated: () => {
-    set({ generatedRecipes: [] });
+  clearSuggestions: () => {
+    set({ suggestedRecipes: [] });
+  },
+
+  getAIPromptUrl: (ingredients: string[]) => {
+    const { mealTypeFilter } = get();
+    return recipesService.buildAIPromptUrl(ingredients, mealTypeFilter);
   },
 }));
