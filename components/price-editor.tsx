@@ -9,6 +9,8 @@ import {
 } from 'react-native';
 
 import { Colors } from '@/constants/theme';
+import { neuInset, neuSurface } from '@/lib/neumorphic';
+import { useColorScheme } from '@/hooks/use-color-scheme';
 import { validatePriceInput } from '@/utils/validate-price-input';
 
 interface PriceEditorProps {
@@ -29,6 +31,7 @@ export function PriceEditor({
   const [inputValue, setInputValue] = useState<string>(
     currentPrice != null ? String(currentPrice) : ''
   );
+  const scheme = useColorScheme() ?? 'light';
 
   const handleConfirm = () => {
     const result = validatePriceInput(inputValue);
@@ -39,12 +42,13 @@ export function PriceEditor({
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.card }]}>
+    <View style={[styles.container, neuSurface(scheme, 'flat')]}>
       <Text style={[styles.currencyLabel, { color: colors.text }]}>$</Text>
       <TextInput
         style={[
           styles.input,
-          { color: colors.text, borderColor: colors.primary },
+          neuInset(scheme),
+          { color: colors.text },
         ]}
         value={inputValue}
         onChangeText={setInputValue}
@@ -90,7 +94,6 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderRadius: 8,
     paddingHorizontal: 8,
     paddingVertical: 4,
     gap: 6,
@@ -102,7 +105,6 @@ const styles = StyleSheet.create({
   input: {
     flex: 1,
     fontSize: 16,
-    borderWidth: 1,
     borderRadius: 6,
     paddingHorizontal: 8,
     paddingVertical: 4,

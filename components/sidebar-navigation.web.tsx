@@ -6,6 +6,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { ThemedText } from '@/components/themed-text';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { neuSurface } from '@/lib/neumorphic';
 import { NavigationItem, RESPONSIVE_DEFAULTS } from '@/types';
 
 const NAVIGATION_ITEMS: NavigationItem[] = [
@@ -21,7 +22,8 @@ interface SidebarNavigationProps {
 
 export function SidebarNavigation({ activeRoute }: SidebarNavigationProps) {
   const colorScheme = useColorScheme();
-  const colors = Colors[colorScheme === 'dark' ? 'dark' : 'light'];
+  const scheme = colorScheme === 'dark' ? 'dark' : 'light';
+  const colors = Colors[scheme];
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -32,7 +34,10 @@ export function SidebarNavigation({ activeRoute }: SidebarNavigationProps) {
         return (
           <Pressable
             key={item.route}
-            style={styles.navItem}
+            style={[
+              styles.navItem,
+              neuSurface(scheme, isActive ? 'pressed' : 'flat'),
+            ]}
             onPress={() => router.push(item.route as any)}
             accessibilityRole="button"
             accessibilityLabel={item.label}
@@ -63,7 +68,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 14,
     paddingHorizontal: 12,
-    borderRadius: 8,
   },
   navLabel: {
     marginLeft: 12,

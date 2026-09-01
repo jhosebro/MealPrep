@@ -1,17 +1,33 @@
+import { ClayButton, ClayCard } from '@/components/clay';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { neuSurface } from '@/lib/neumorphic';
 import { biometricService } from '@/services/biometricService';
 import { useAuthStore } from '@/stores/authStore';
 import { useFridgeStore } from '@/stores/fridgeStore';
 import { useRecipesStore } from '@/stores/recipesStore';
 import { useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
-import { Alert, FlatList, Modal, Platform, StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
+import {
+  Alert,
+  FlatList,
+  Modal,
+  Platform,
+  Pressable,
+  StyleSheet,
+  Switch,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+
+type Status = 'available' | 'low' | 'empty';
 
 export default function HomeScreen() {
   const router = useRouter();
   const colorScheme = useColorScheme();
   const colors = Colors[(colorScheme ?? 'light') as keyof typeof Colors];
+  const scheme = (colorScheme ?? 'light') as 'light' | 'dark';
   const { user, signOut } = useAuthStore();
   const { items, fetchItems } = useFridgeStore();
   const { suggestRecipes, fetchSavedRecipes } = useRecipesStore();
@@ -102,7 +118,7 @@ export default function HomeScreen() {
       </View>
 
       <Modal visible={showSettings} transparent animationType="slide">
-        <View style={styles.modalOverlay}>
+        <View style={[styles.modalOverlay, { backgroundColor: colors.overlay }]}>
           <View style={[styles.modalContent, { backgroundColor: colors.background }]}>
             <Text style={[styles.modalTitle, { color: colors.text }]}>Configuración</Text>
 
@@ -118,57 +134,49 @@ export default function HomeScreen() {
             </View>
 
             <TouchableOpacity
-              style={[styles.signOutButton, { borderColor: 'red' }]}
+              style={[styles.signOutButton, neuSurface(scheme, 'raised'), { borderColor: colors.danger }]}
               onPress={handleSignOut}
             >
-              <Text style={{ color: 'red', fontSize: 16, fontWeight: '600' }}>
+              <Text style={{ color: colors.danger, fontSize: 16, fontWeight: '600' }}>
                 Cerrar sesión
               </Text>
             </TouchableOpacity>
 
-            <TouchableOpacity
-              style={[styles.closeButton, { backgroundColor: colors.card }]}
+            <Pressable
               onPress={() => setShowSettings(false)}
+              style={[styles.closeButton, neuSurface(scheme, 'raised')]}
             >
               <Text style={[styles.closeButtonText, { color: colors.text }]}>Cerrar</Text>
-            </TouchableOpacity>
+            </Pressable>
           </View>
         </View>
       </Modal>
 
       <View style={styles.content}>
-        <TouchableOpacity
-          style={[styles.card, { backgroundColor: colors.card }]}
-          onPress={() => router.push('/(tabs)/fridge')}
-        >
-          <Text style={[styles.cardTitle, { color: colors.text }]}>🥗 Mi Nevera</Text>
-          <Text style={[styles.cardText, { color: colors.textSecondary }]}>
-            {items.length === 0
-              ? 'Agrega tus ingredientes'
-              : `${items.length} items`}
-          </Text>
-        </TouchableOpacity>
+        <Pressable onPress={() => router.push('/(tabs)/fridge')}>
+          <ClayCard style={styles.card}>
+            <Text style={[styles.cardTitle, { color: colors.text }]}>🥗 Mi Nevera</Text>
+            <Text style={[styles.cardText, { color: colors.textSecondary }]}>
+              {items.length === 0
+                ? 'Agrega tus ingredientes'
+                : `${items.length} items`}
+            </Text>
+          </ClayCard>
+        </Pressable>
 
-        <TouchableOpacity
-          style={[styles.card, { backgroundColor: colors.card }]}
-          onPress={() => router.push('/(tabs)/recipes')}
-        >
-          <Text style={[styles.cardTitle, { color: colors.text }]}>📖 Recetas</Text>
-          <Text style={[styles.cardText, { color: colors.textSecondary }]}>
-            Ver recetas guardadas
-          </Text>
-        </TouchableOpacity>
+        <Pressable onPress={() => router.push('/(tabs)/recipes')}>
+          <ClayCard style={styles.card}>
+            <Text style={[styles.cardTitle, { color: colors.text }]}>📖 Recetas</Text>
+            <Text style={[styles.cardText, { color: colors.textSecondary }]}>
+              Ver recetas guardadas
+            </Text>
+          </ClayCard>
+        </Pressable>
 
         {items.length > 0 && (
-          <TouchableOpacity
-            style={[styles.generateButton, { backgroundColor: colors.primary }]}
-            onPress={handleGenerate}
-            disabled={loading}
-          >
-            <Text style={styles.generateButtonText}>
-              {loading ? 'Generando...' : '✨ Generar Recetas'}
-            </Text>
-          </TouchableOpacity>
+          <ClayButton onPress={handleGenerate} disabled={loading}>
+            {loading ? 'Generando...' : '✨ Generar Recetas'}
+          </ClayButton>
         )}
       </View>
 
@@ -180,7 +188,7 @@ export default function HomeScreen() {
           {nearDepletion.slice(0, 5).map((item) => (
             <TouchableOpacity
               key={item.id}
-              style={[styles.depletionItem, { backgroundColor: colors.card }]}
+              style={[styles.depletionItem, neuSurface(scheme, 'flat')]}
               onPress={() => router.push(`/fridge/${item.id}` as any)}
             >
               <View style={styles.depletionContent}>
@@ -209,7 +217,7 @@ export default function HomeScreen() {
             horizontal
             showsHorizontalScrollIndicator={false}
             renderItem={({ item }) => (
-              <View style={[styles.ingredientChip, { backgroundColor: colors.card }]}>
+              <View style={[styles.ingredientChip, neuSurface(scheme, 'raised')]}>
                 <Text style={[styles.ingredientText, { color: colors.text }]}>
                   {item.name}
                 </Text>
@@ -253,7 +261,6 @@ const styles = StyleSheet.create({
   modalOverlay: {
     flex: 1,
     justifyContent: 'flex-end',
-    backgroundColor: 'rgba(0,0,0,0.5)',
   },
   modalContent: {
     borderTopLeftRadius: 20,
@@ -294,11 +301,10 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: 16,
+    gap: 12,
   },
   card: {
-    padding: 20,
-    borderRadius: 16,
-    marginBottom: 12,
+    marginBottom: 0,
   },
   cardTitle: {
     fontSize: 20,
@@ -307,17 +313,6 @@ const styles = StyleSheet.create({
   },
   cardText: {
     fontSize: 14,
-  },
-  generateButton: {
-    padding: 16,
-    borderRadius: 12,
-    alignItems: 'center',
-    marginTop: 12,
-  },
-  generateButtonText: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: 'bold',
   },
   section: {
     paddingHorizontal: 16,

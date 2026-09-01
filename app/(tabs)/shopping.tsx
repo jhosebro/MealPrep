@@ -1,4 +1,5 @@
 import { PriceEditor } from "@/components/price-editor";
+import { neuSurface, neuInset } from '@/lib/neumorphic';
 import { Colors } from "@/constants/theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { BudgetPurchase } from "@/services/budgetService";
@@ -24,12 +25,6 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-const statusColor: Record<Status, string> = {
-  available: "#4CAF50",
-  low: "#FFA500",
-  empty: "#FF4444",
-};
-
 const statusLabel: Record<Status, string> = {
   available: "Disponible",
   low: "Próximo a agotarse",
@@ -38,7 +33,8 @@ const statusLabel: Record<Status, string> = {
 
 export default function ShoppingScreen() {
   const colorScheme = useColorScheme();
-  const colors = Colors[colorScheme ?? "light"];
+  const scheme = (colorScheme === "dark" ? "dark" : "light") as "light" | "dark";
+  const colors = Colors[scheme];
   const { user } = useAuthStore();
   const { items, fetchItems, updateItem } = useFridgeStore();
   const {
@@ -51,6 +47,12 @@ export default function ShoppingScreen() {
     finishShopping,
     loading,
   } = useBudgetStore();
+
+  const statusColor: Record<Status, string> = {
+    available: colors.success,
+    low: colors.warning,
+    empty: colors.danger,
+  };
 
   const [refreshing, setRefreshing] = useState(false);
   const [selectedCat, setSelectedCat] = useState<string | null>(null);
@@ -261,7 +263,7 @@ export default function ShoppingScreen() {
     return (
       <Animated.View style={[
         styles.itemCard,
-        { backgroundColor: colors.card },
+        neuSurface(scheme, 'raised'),
         isEditing && { borderWidth: 2, borderColor: colors.primary },
         animatedStyle,
       ]}>
@@ -310,12 +312,13 @@ export default function ShoppingScreen() {
             {statusLabel[item.status]}
           </Text>
         </View>
-        <TouchableOpacity
-          style={[styles.buyButton, { backgroundColor: colors.primary }]}
-          onPress={() => handleMarkBought(item)}
+        <View
+          style={[styles.buyButton, neuSurface(scheme, 'raised'), { backgroundColor: colors.primary }]}
         >
-          <Text style={styles.buyButtonText}>Comprado</Text>
-        </TouchableOpacity>
+          <TouchableOpacity onPress={() => handleMarkBought(item)}>
+            <Text style={styles.buyButtonText}>Comprado</Text>
+          </TouchableOpacity>
+        </View>
       </Animated.View>
     );
   };
@@ -351,8 +354,10 @@ export default function ShoppingScreen() {
             <TouchableOpacity
               style={[
                 styles.tab,
-                { backgroundColor: colors.card },
-                !selectedCat && { backgroundColor: colors.primary },
+                !selectedCat
+                  ? { backgroundColor: colors.primary, borderColor: colors.primaryDark }
+                  : neuSurface(scheme, 'raised'),
+                !selectedCat && { borderWidth: 1.5 },
               ]}
               onPress={() => setSelectedCat(null)}
             >
@@ -374,8 +379,10 @@ export default function ShoppingScreen() {
                   key={cat}
                   style={[
                     styles.tab,
-                    { backgroundColor: colors.card },
-                    selectedCat === cat && { backgroundColor: colors.primary },
+                    selectedCat === cat
+                      ? { backgroundColor: colors.primary, borderColor: colors.primaryDark }
+                      : neuSurface(scheme, 'raised'),
+                    selectedCat === cat && { borderWidth: 1.5 },
                   ]}
                   onPress={() => setSelectedCat(cat)}
                 >
@@ -402,8 +409,10 @@ export default function ShoppingScreen() {
             <TouchableOpacity
               style={[
                 styles.tab,
-                { backgroundColor: colors.card },
-                !selectedStore && { backgroundColor: colors.primary },
+                !selectedStore
+                  ? { backgroundColor: colors.primary, borderColor: colors.primaryDark }
+                  : neuSurface(scheme, 'raised'),
+                !selectedStore && { borderWidth: 1.5 },
               ]}
               onPress={() => setSelectedStore(null)}
             >
@@ -425,10 +434,10 @@ export default function ShoppingScreen() {
                   key={store}
                   style={[
                     styles.tab,
-                    { backgroundColor: colors.card },
-                    selectedStore === store && {
-                      backgroundColor: colors.primary,
-                    },
+                    selectedStore === store
+                      ? { backgroundColor: colors.primary, borderColor: colors.primaryDark }
+                      : neuSurface(scheme, 'raised'),
+                    selectedStore === store && { borderWidth: 1.5 },
                   ]}
                   onPress={() => setSelectedStore(store)}
                 >
@@ -450,7 +459,7 @@ export default function ShoppingScreen() {
 
       {!session && shoppingItems.length > 0 && (
         <TouchableOpacity
-          style={[styles.startBudgetBtn, { backgroundColor: colors.card }]}
+          style={[styles.startBudgetBtn, neuSurface(scheme, 'raised')]}
           onPress={() => setShowBudgetModal(true)}
         >
           <Text style={[styles.startBudgetText, { color: colors.text }]}>
@@ -472,7 +481,7 @@ export default function ShoppingScreen() {
   const footerComponent = (
     <>
       {filteredItems.length > 0 && (
-        <View style={[styles.totalBar, { backgroundColor: colors.card }]}>
+        <View style={[styles.totalBar, neuSurface(scheme, 'flat')]}>
           <Text style={[styles.totalLabel, { color: colors.text }]}>
             Total aproximado
           </Text>
@@ -490,7 +499,7 @@ export default function ShoppingScreen() {
           {purchasedItems.map(({ item, purchase }) => (
             <View
               key={purchase.id}
-              style={[styles.undoCard, { backgroundColor: colors.card }]}
+              style={[styles.undoCard, neuSurface(scheme, 'raised')]}
             >
               <View style={styles.itemContent}>
                 <Text style={[styles.itemName, { color: colors.text }]}>
@@ -503,7 +512,7 @@ export default function ShoppingScreen() {
                 </Text>
               </View>
               <TouchableOpacity
-                style={[styles.undoButton, { borderColor: colors.primary }]}
+                style={[styles.undoButton, neuSurface(scheme, 'raised'), { borderColor: colors.primary }]}
                 onPress={() => handleUndo(purchase)}
                 disabled={loading}
               >
@@ -525,7 +534,7 @@ export default function ShoppingScreen() {
       style={[styles.safe, { backgroundColor: colors.background }]}
     >
       {session && (
-        <View style={[styles.budgetBar, { backgroundColor: colors.card }]}>
+        <View style={[styles.budgetBar, neuSurface(scheme, 'raised')]}>
           <View style={styles.budgetRow}>
             <Text style={[styles.budgetLabel, { color: colors.text }]}>
               🎯 ${session.amount.toLocaleString()}
@@ -536,14 +545,14 @@ export default function ShoppingScreen() {
               </Text>
             </TouchableOpacity>
           </View>
-          <View style={styles.budgetProgressBg}>
+          <View style={[styles.budgetProgressBg, neuInset(scheme)]}>
             <View
               style={[
                 styles.budgetProgressFill,
                 {
                   width: `${(budgetProgress * 100).toFixed(0)}%` as `${number}%`,
                   backgroundColor:
-                    budgetProgress > 0.9 ? "#FF4444" : colors.primary,
+                    budgetProgress > 0.9 ? colors.danger : colors.primary,
                 },
               ]}
             />
@@ -599,7 +608,7 @@ export default function ShoppingScreen() {
         animationType="slide"
         onRequestClose={() => setShowBudgetModal(false)}
       >
-        <View style={styles.modalOverlay}>
+        <View style={[styles.modalOverlay, { backgroundColor: colors.overlay }]}>
           <View
             style={[
               styles.modalContent,
@@ -612,7 +621,8 @@ export default function ShoppingScreen() {
             <TextInput
               style={[
                 styles.modalInput,
-                { backgroundColor: colors.card, color: colors.text },
+                neuInset(scheme),
+                { color: colors.text },
               ]}
               value={budgetAmount}
               onChangeText={setBudgetAmount}
@@ -625,7 +635,7 @@ export default function ShoppingScreen() {
               <TouchableOpacity
                 style={[
                   styles.modalBtn,
-                  { backgroundColor: colors.card },
+                  neuSurface(scheme, 'raised'),
                 ]}
                 onPress={() => {
                   setShowBudgetModal(false);
@@ -639,6 +649,7 @@ export default function ShoppingScreen() {
               <TouchableOpacity
                 style={[
                   styles.modalBtn,
+                  neuSurface(scheme, 'raised'),
                   { backgroundColor: colors.primary },
                 ]}
                 onPress={handleStartBudget}
@@ -698,7 +709,6 @@ const styles = StyleSheet.create({
   budgetProgressBg: {
     height: 8,
     borderRadius: 4,
-    backgroundColor: "#e0e0e0",
     marginVertical: 8,
     overflow: "hidden",
   },
@@ -883,7 +893,6 @@ const styles = StyleSheet.create({
   // Modal
   modalOverlay: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.5)",
     justifyContent: "flex-end",
   },
   modalContent: {

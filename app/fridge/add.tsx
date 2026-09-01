@@ -1,8 +1,10 @@
+import { ClayButton, ClayChip } from "@/components/clay";
 import { DateField } from "@/components/date-field";
 import { Colors } from "@/constants/theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useAuthStore } from "@/stores/authStore";
 import { useFridgeStore } from "@/stores/fridgeStore";
+import { neuInset } from "@/lib/neumorphic";
 import { CATEGORIES, Status, STORES, UNITS } from "@/types";
 import { useRouter } from "expo-router";
 import { useState } from "react";
@@ -20,7 +22,8 @@ import CurrencyInput from "react-native-currency-input";
 export default function AddItemScreen() {
   const router = useRouter();
   const colorScheme = useColorScheme();
-  const colors = Colors[(colorScheme ?? "light") as keyof typeof Colors];
+  const scheme = (colorScheme ?? "light") as "light" | "dark";
+  const colors = Colors[scheme];
   const { user } = useAuthStore();
   const { addItem, loading } = useFridgeStore();
 
@@ -101,10 +104,7 @@ export default function AddItemScreen() {
         <View style={styles.field}>
           <Text style={[styles.label, { color: colors.text }]}>Nombre</Text>
           <TextInput
-            style={[
-              styles.input,
-              { backgroundColor: colors.card, color: colors.text },
-            ]}
+            style={[styles.input, neuInset(scheme), { color: colors.text }]}
             value={name}
             onChangeText={setName}
             placeholder="Ej: Huevos, Leche, Tomate..."
@@ -116,10 +116,7 @@ export default function AddItemScreen() {
           <View style={[styles.field, { flex: 1 }]}>
             <Text style={[styles.label, { color: colors.text }]}>Cantidad</Text>
             <TextInput
-              style={[
-                styles.input,
-                { backgroundColor: colors.card, color: colors.text },
-              ]}
+              style={[styles.input, neuInset(scheme), { color: colors.text }]}
               value={quantity}
               onChangeText={setQuantity}
               keyboardType="numeric"
@@ -131,25 +128,13 @@ export default function AddItemScreen() {
             <Text style={[styles.label, { color: colors.text }]}>Unidad</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false}>
               {UNITS.map((u) => (
-                <TouchableOpacity
+                <ClayChip
                   key={u}
-                  style={[
-                    styles.unitChip,
-                    { backgroundColor: colors.card },
-                    unit === u && { backgroundColor: colors.primary },
-                  ]}
+                  label={u}
+                  active={unit === u}
                   onPress={() => setUnit(u)}
-                >
-                  <Text
-                    style={[
-                      styles.unitChipText,
-                      { color: colors.text },
-                      unit === u && { color: "#fff" },
-                    ]}
-                  >
-                    {u}
-                  </Text>
-                </TouchableOpacity>
+                  style={styles.unitChip}
+                />
               ))}
             </ScrollView>
           </View>
@@ -159,25 +144,12 @@ export default function AddItemScreen() {
           <Text style={[styles.label, { color: colors.text }]}>Categoría</Text>
           <View style={styles.categoryGrid}>
             {CATEGORIES.map((cat) => (
-              <TouchableOpacity
+              <ClayChip
                 key={cat}
-                style={[
-                  styles.categoryChip,
-                  { backgroundColor: colors.card },
-                  category === cat && { backgroundColor: colors.primary },
-                ]}
+                label={cat}
+                active={category === cat}
                 onPress={() => setCategory(cat)}
-              >
-                <Text
-                  style={[
-                    styles.categoryChipText,
-                    { color: colors.text },
-                    category === cat && { color: "#fff" },
-                  ]}
-                >
-                  {cat}
-                </Text>
-              </TouchableOpacity>
+              />
             ))}
           </View>
         </View>
@@ -186,36 +158,21 @@ export default function AddItemScreen() {
           <Text style={[styles.label, { color: colors.text }]}>Estado</Text>
           <View style={styles.categoryGrid}>
             {(["available", "low", "empty"] as Status[]).map((s) => (
-              <TouchableOpacity
+              <ClayChip
                 key={s}
-                style={[
-                  styles.categoryChip,
-                  { backgroundColor: colors.card },
-                  status === s && {
-                    backgroundColor:
-                      s === "available"
-                        ? colors.primary
-                        : s === "low"
-                          ? "#FFA500"
-                          : "#FF4444",
-                  },
-                ]}
-                onPress={() => setStatus(s)}
-              >
-                <Text
-                  style={[
-                    styles.categoryChipText,
-                    { color: colors.text },
-                    status === s && { color: "#fff" },
-                  ]}
-                >
-                  {s === "available"
+                label={s === "available"
                     ? "Disponible"
                     : s === "low"
                       ? "Próximo a agotarse"
                       : "Agotado"}
-                </Text>
-              </TouchableOpacity>
+                active={status === s}
+                onPress={() => setStatus(s)}
+                style={s === "low" || s === "empty" ? {
+                  backgroundColor: status === s
+                    ? (s === "low" ? colors.warning : colors.danger)
+                    : colors.surface,
+                } : undefined}
+              />
             ))}
           </View>
         </View>
@@ -229,10 +186,7 @@ export default function AddItemScreen() {
             delimiter="."
             separator=","
             precision={0}
-            style={[
-              styles.input,
-              { backgroundColor: colors.card, color: colors.text },
-            ]}
+            style={[styles.input, neuInset(scheme), { color: colors.text }]}
           />
         </View>
 
@@ -267,50 +221,29 @@ export default function AddItemScreen() {
             Establecimiento
           </Text>
           <View style={styles.categoryGrid}>
-            {STORES.map((s) => (
-              <TouchableOpacity
-                key={s}
-                style={[
-                  styles.categoryChip,
-                  { backgroundColor: colors.card },
-                  (s === "Otro" ? showCustomStore : storeName === s) && {
-                    backgroundColor: colors.primary,
-                  },
-                ]}
-                onPress={() => {
-                  if (s === "Otro") {
-                    setShowCustomStore(true);
-                    setStoreName("");
-                  } else {
-                    setShowCustomStore(false);
-                    setStoreName(s);
-                  }
-                }}
-              >
-                <Text
-                  style={[
-                    styles.categoryChipText,
-                    { color: colors.text },
-                    (s === "Otro" ? showCustomStore : storeName === s) && {
-                      color: "#fff",
-                    },
-                  ]}
-                >
-                  {s}
-                </Text>
-              </TouchableOpacity>
-            ))}
+            {STORES.map((s) => {
+              const isActive = s === "Otro" ? showCustomStore : storeName === s;
+              return (
+                <ClayChip
+                  key={s}
+                  label={s}
+                  active={isActive}
+                  onPress={() => {
+                    if (s === "Otro") {
+                      setShowCustomStore(true);
+                      setStoreName("");
+                    } else {
+                      setShowCustomStore(false);
+                      setStoreName(s);
+                    }
+                  }}
+                />
+              );
+            })}
           </View>
           {showCustomStore && (
             <TextInput
-              style={[
-                styles.input,
-                {
-                  backgroundColor: colors.card,
-                  color: colors.text,
-                  marginTop: 8,
-                },
-              ]}
+              style={[styles.input, neuInset(scheme), { color: colors.text, marginTop: 8 }]}
               value={storeName}
               onChangeText={setStoreName}
               placeholder="Escribe el nombre del establecimiento"
@@ -319,19 +252,14 @@ export default function AddItemScreen() {
           )}
         </View>
 
-        <TouchableOpacity
-          style={[
-            styles.saveButton,
-            { backgroundColor: colors.primary },
-            loading && styles.saveButtonDisabled,
-          ]}
+        <ClayButton
           onPress={handleSave}
           disabled={loading}
+          loading={loading}
+          style={{ marginTop: 20 }}
         >
-          <Text style={styles.saveButtonText}>
-            {loading ? "Guardando..." : "Guardar"}
-          </Text>
-        </TouchableOpacity>
+          {loading ? "Guardando..." : "Guardar"}
+        </ClayButton>
       </ScrollView>
     </View>
   );
@@ -373,7 +301,7 @@ const styles = StyleSheet.create({
   },
   input: {
     padding: 14,
-    borderRadius: 10,
+    borderRadius: 12,
     fontSize: 16,
   },
   row: {
@@ -382,41 +310,11 @@ const styles = StyleSheet.create({
   unitChip: {
     width: 65,
     height: 44,
-    borderRadius: 22,
     marginRight: 8,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  unitChipText: {
-    fontSize: 14,
-    textAlign: "center",
   },
   categoryGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
     gap: 8,
-  },
-  categoryChip: {
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 20,
-  },
-  categoryChipText: {
-    fontSize: 14,
-    textTransform: "capitalize",
-  },
-  saveButton: {
-    padding: 16,
-    borderRadius: 12,
-    alignItems: "center",
-    marginTop: 20,
-  },
-  saveButtonDisabled: {
-    opacity: 0.6,
-  },
-  saveButtonText: {
-    color: "#fff",
-    fontSize: 18,
-    fontWeight: "bold",
   },
 });

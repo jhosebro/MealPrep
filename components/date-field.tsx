@@ -4,6 +4,9 @@ import DateTimePicker, {
 import { useState } from "react";
 import { Platform, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
+import { neuInset } from "@/lib/neumorphic";
+import { useColorScheme } from "@/hooks/use-color-scheme";
+
 interface DateFieldProps {
   value: Date | null;
   onChange: (date: Date | null) => void;
@@ -13,6 +16,9 @@ interface DateFieldProps {
     text: string;
     textSecondary: string;
     tint: string;
+    surface: string;
+    surfacePressed: string;
+    borderInset: string;
   };
   showClear?: boolean;
   clearLabel?: string;
@@ -27,6 +33,7 @@ export function DateField({
   clearLabel = "Eliminar fecha",
 }: DateFieldProps) {
   const [showPicker, setShowPicker] = useState(false);
+  const scheme = useColorScheme() ?? "light";
 
   const formatDisplay = (date: Date) => {
     const year = date.getFullYear();
@@ -61,7 +68,7 @@ export function DateField({
   if (Platform.OS === "web") {
     return (
       <View>
-        <View style={[styles.inputContainer, { backgroundColor: colors.card }]}>
+        <View style={[styles.inputContainer, neuInset(scheme)]}>
           <input
             type="date"
             value={value ? formatDisplay(value) : ""}
@@ -95,7 +102,7 @@ export function DateField({
   return (
     <View>
       <TouchableOpacity
-        style={[styles.input, { backgroundColor: colors.card }]}
+        style={[styles.input, neuInset(scheme)]}
         onPress={() => setShowPicker(true)}
       >
         <Text style={{ color: value ? colors.text : colors.textSecondary }}>

@@ -1,5 +1,7 @@
+import { ClayCard, ClayButton, ClayChip } from '@/components/clay';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { neuSurface, neuInset } from '@/lib/neumorphic';
 import { recipesService } from '@/services/recipesService';
 import { useAuthStore } from '@/stores/authStore';
 import { useFridgeStore } from '@/stores/fridgeStore';
@@ -33,6 +35,7 @@ const showAlert = (title: string, message: string) => {
 export default function RecipesScreen() {
   const router = useRouter();
   const colorScheme = useColorScheme();
+  const scheme = (colorScheme ?? 'light') as 'light' | 'dark';
   const colors = Colors[(colorScheme ?? 'light') as keyof typeof Colors];
   const { user } = useAuthStore();
   const { items: fridgeItems, fetchItems: fetchFridgeItems, getIngredientNames } = useFridgeStore();
@@ -190,32 +193,18 @@ export default function RecipesScreen() {
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.filtersContainer}
       >
-        <TouchableOpacity
-          style={[
-            styles.filterChip,
-            { borderColor: colors.textSecondary },
-            !mealTypeFilter && { backgroundColor: colors.primary, borderColor: colors.primary },
-          ]}
+        <ClayChip
+          label="Todas"
+          active={!mealTypeFilter}
           onPress={() => setMealTypeFilter(null)}
-        >
-          <Text style={[styles.filterChipText, !mealTypeFilter && styles.filterChipTextActive]}>
-            Todas
-          </Text>
-        </TouchableOpacity>
+        />
         {MEAL_TYPES.map((type) => (
-          <TouchableOpacity
+          <ClayChip
             key={type}
-            style={[
-              styles.filterChip,
-              { borderColor: colors.textSecondary },
-              mealTypeFilter === type && { backgroundColor: colors.primary, borderColor: colors.primary },
-            ]}
+            label={getMealTypeLabel(type)}
+            active={mealTypeFilter === type}
             onPress={() => setMealTypeFilter(mealTypeFilter === type ? null : type)}
-          >
-            <Text style={[styles.filterChipText, mealTypeFilter === type && styles.filterChipTextActive]}>
-              {getMealTypeLabel(type)}
-            </Text>
-          </TouchableOpacity>
+          />
         ))}
       </ScrollView>
     </View>
@@ -223,92 +212,96 @@ export default function RecipesScreen() {
 
   const renderSuggestionCard = ({ item }: { item: typeof suggestedRecipes[0] }) => (
     <TouchableOpacity
-      style={[styles.recipeCard, { backgroundColor: colors.card }]}
       onPress={() => navigateToDetail(item.recipe, item.savedRecipe.id)}
+      activeOpacity={0.8}
     >
-      <View style={styles.recipeHeader}>
-        <Text style={[styles.recipeTitle, { color: colors.text }]} numberOfLines={2}>
-          {item.recipe.title}
-        </Text>
-        <View style={[styles.mealTypeBadge, { backgroundColor: getMealTypeColor(item.recipe.meal_type) }]}>
-          <Text style={styles.mealTypeText}>{item.recipe.meal_type}</Text>
+      <ClayCard style={{ marginBottom: 12 }}>
+        <View style={styles.recipeHeader}>
+          <Text style={[styles.recipeTitle, { color: colors.text }]} numberOfLines={2}>
+            {item.recipe.title}
+          </Text>
+          <View style={[styles.mealTypeBadge, { backgroundColor: getMealTypeColor(item.recipe.meal_type) }]}>
+            <Text style={styles.mealTypeText}>{item.recipe.meal_type}</Text>
+          </View>
         </View>
-      </View>
 
-      <View style={styles.matchRow}>
-        <View style={[styles.matchBadge, { backgroundColor: item.missingIngredients.length === 0 ? '#4CAF50' : '#FF9800' }]}>
-          <Text style={styles.matchBadgeText}>
-            {item.missingIngredients.length === 0
-              ? '✓ Tienes todo'
-              : `${item.missingIngredients.length} faltante${item.missingIngredients.length > 1 ? 's' : ''}`}
+        <View style={styles.matchRow}>
+          <View style={[styles.matchBadge, { backgroundColor: item.missingIngredients.length === 0 ? colors.success : colors.warning }]}>
+            <Text style={styles.matchBadgeText}>
+              {item.missingIngredients.length === 0
+                ? '✓ Tienes todo'
+                : `${item.missingIngredients.length} faltante${item.missingIngredients.length > 1 ? 's' : ''}`}
+            </Text>
+          </View>
+          <Text style={[styles.matchPercent, { color: colors.textSecondary }]}>
+            {Math.round(item.matchPercentage)}% match
           </Text>
         </View>
-        <Text style={[styles.matchPercent, { color: colors.textSecondary }]}>
-          {Math.round(item.matchPercentage)}% match
-        </Text>
-      </View>
 
-      <View style={styles.recipeMetaRow}>
-        {item.recipe.servings && (
-          <Text style={[styles.recipeMeta, { color: colors.textSecondary }]}>
-            🍽 {item.recipe.servings} {item.recipe.servings === 1 ? 'porción' : 'porciones'}
-          </Text>
-        )}
-        {item.recipe.prep_time_minutes && (
-          <Text style={[styles.recipeMeta, { color: colors.textSecondary }]}>
-            ⏱ {item.recipe.prep_time_minutes} min
-          </Text>
-        )}
-        {item.recipe.difficulty && (
-          <Text style={[styles.recipeMeta, { color: colors.textSecondary }]}>
-            📊 {item.recipe.difficulty}
-          </Text>
-        )}
-      </View>
+        <View style={styles.recipeMetaRow}>
+          {item.recipe.servings && (
+            <Text style={[styles.recipeMeta, { color: colors.textSecondary }]}>
+              🍽 {item.recipe.servings} {item.recipe.servings === 1 ? 'porción' : 'porciones'}
+            </Text>
+          )}
+          {item.recipe.prep_time_minutes && (
+            <Text style={[styles.recipeMeta, { color: colors.textSecondary }]}>
+              ⏱ {item.recipe.prep_time_minutes} min
+            </Text>
+          )}
+          {item.recipe.difficulty && (
+            <Text style={[styles.recipeMeta, { color: colors.textSecondary }]}>
+              📊 {item.recipe.difficulty}
+            </Text>
+          )}
+        </View>
 
-      {item.missingIngredients.length > 0 && (
-        <Text style={[styles.missingText, { color: '#FF9800' }]}>
-          Falta: {item.missingIngredients.join(', ')}
-        </Text>
-      )}
+        {item.missingIngredients.length > 0 && (
+          <Text style={[styles.missingText, { color: colors.warning }]}>
+            Falta: {item.missingIngredients.join(', ')}
+          </Text>
+        )}
+      </ClayCard>
     </TouchableOpacity>
   );
 
   const renderSavedCard = ({ item }: { item: typeof savedRecipes[0] }) => (
     <TouchableOpacity
-      style={[styles.recipeCard, { backgroundColor: colors.card }]}
       onPress={() => navigateToDetail(item.recipe_data, item.id)}
+      activeOpacity={0.8}
     >
-      <View style={styles.recipeHeader}>
-        <Text style={[styles.recipeTitle, { color: colors.text }]} numberOfLines={2}>
-          {item.recipe_data.title}
-        </Text>
-        <View style={[styles.mealTypeBadge, { backgroundColor: getMealTypeColor(item.recipe_data.meal_type) }]}>
-          <Text style={styles.mealTypeText}>{item.recipe_data.meal_type}</Text>
+      <ClayCard style={{ marginBottom: 12 }}>
+        <View style={styles.recipeHeader}>
+          <Text style={[styles.recipeTitle, { color: colors.text }]} numberOfLines={2}>
+            {item.recipe_data.title}
+          </Text>
+          <View style={[styles.mealTypeBadge, { backgroundColor: getMealTypeColor(item.recipe_data.meal_type) }]}>
+            <Text style={styles.mealTypeText}>{item.recipe_data.meal_type}</Text>
+          </View>
         </View>
-      </View>
-      <View style={styles.recipeMetaRow}>
-        {item.recipe_data.servings && (
-          <Text style={[styles.recipeMeta, { color: colors.textSecondary }]}>
-            🍽 {item.recipe_data.servings} {item.recipe_data.servings === 1 ? 'porción' : 'porciones'}
+        <View style={styles.recipeMetaRow}>
+          {item.recipe_data.servings && (
+            <Text style={[styles.recipeMeta, { color: colors.textSecondary }]}>
+              🍽 {item.recipe_data.servings} {item.recipe_data.servings === 1 ? 'porción' : 'porciones'}
+            </Text>
+          )}
+          {item.recipe_data.prep_time_minutes && (
+            <Text style={[styles.recipeMeta, { color: colors.textSecondary }]}>
+              ⏱ {item.recipe_data.prep_time_minutes} min
+            </Text>
+          )}
+          {item.recipe_data.difficulty && (
+            <Text style={[styles.recipeMeta, { color: colors.textSecondary }]}>
+              📊 {item.recipe_data.difficulty}
+            </Text>
+          )}
+        </View>
+        {item.last_cooked_at && (
+          <Text style={[styles.cookedLabel, { color: colors.textSecondary }]}>
+            ✅ Preparada recientemente
           </Text>
         )}
-        {item.recipe_data.prep_time_minutes && (
-          <Text style={[styles.recipeMeta, { color: colors.textSecondary }]}>
-            ⏱ {item.recipe_data.prep_time_minutes} min
-          </Text>
-        )}
-        {item.recipe_data.difficulty && (
-          <Text style={[styles.recipeMeta, { color: colors.textSecondary }]}>
-            📊 {item.recipe_data.difficulty}
-          </Text>
-        )}
-      </View>
-      {item.last_cooked_at && (
-        <Text style={[styles.cookedLabel, { color: colors.textSecondary }]}>
-          ✅ Preparada recientemente
-        </Text>
-      )}
+      </ClayCard>
     </TouchableOpacity>
   );
 
@@ -320,7 +313,7 @@ export default function RecipesScreen() {
       onRequestClose={() => setShowAIModal(false)}
     >
       <View style={[styles.modalContainer, { backgroundColor: colors.background }]}>
-        <View style={styles.modalHeader}>
+        <View style={[styles.modalHeader, { borderBottomColor: colors.borderInset }]}>
           <TouchableOpacity onPress={() => setShowAIModal(false)}>
             <Text style={[styles.modalCancel, { color: colors.textSecondary }]}>Cancelar</Text>
           </TouchableOpacity>
@@ -331,32 +324,18 @@ export default function RecipesScreen() {
         <ScrollView style={styles.modalContent} contentContainerStyle={styles.modalContentContainer}>
           <Text style={[styles.modalSectionTitle, { color: colors.text }]}>¿Qué tipo de comida?</Text>
           <View style={styles.modalChipRow}>
-            <TouchableOpacity
-              style={[
-                styles.modalChip,
-                { borderColor: colors.textSecondary },
-                !aiMealType && { backgroundColor: colors.primary, borderColor: colors.primary },
-              ]}
+            <ClayChip
+              label="Cualquiera"
+              active={!aiMealType}
               onPress={() => setAiMealType(null)}
-            >
-              <Text style={[styles.modalChipText, !aiMealType && styles.modalChipTextActive]}>
-                Cualquiera
-              </Text>
-            </TouchableOpacity>
+            />
             {MEAL_TYPES.map((type) => (
-              <TouchableOpacity
+              <ClayChip
                 key={type}
-                style={[
-                  styles.modalChip,
-                  { borderColor: colors.textSecondary },
-                  aiMealType === type && { backgroundColor: colors.primary, borderColor: colors.primary },
-                ]}
+                label={getMealTypeLabel(type)}
+                active={aiMealType === type}
                 onPress={() => setAiMealType(aiMealType === type ? null : type)}
-              >
-                <Text style={[styles.modalChipText, aiMealType === type && styles.modalChipTextActive]}>
-                  {getMealTypeLabel(type)}
-                </Text>
-              </TouchableOpacity>
+              />
             ))}
           </View>
 
@@ -364,22 +343,21 @@ export default function RecipesScreen() {
           <Text style={[styles.modalSectionHint, { color: colors.textSecondary }]}>
             Copia esta plantilla y pídele a la IA que te responda en este formato. Luego podrás guardar la receta desde &quot;Crear Receta &gt; Importar JSON&quot;.
           </Text>
-          <View style={[styles.jsonPreview, { backgroundColor: colors.card }]}>
+          <View style={[styles.jsonPreview, neuInset(scheme)]}>
             <Text style={[styles.jsonPreviewText, { color: colors.text }]}>
               {RECIPE_JSON_TEMPLATE}
             </Text>
           </View>
         </ScrollView>
 
-        <View style={styles.modalFooter}>
-          <TouchableOpacity
-            style={[styles.suggestButton, { backgroundColor: colors.primary }]}
+        <View style={[styles.modalFooter, { borderTopColor: colors.borderInset }]}>
+          <ClayButton
             onPress={handleCopyTemplateAndGo}
           >
-            <Text style={styles.suggestButtonText}>📋 Copiar formato y abrir ChatGPT</Text>
-          </TouchableOpacity>
+            📋 Copiar formato y abrir ChatGPT
+          </ClayButton>
           <TouchableOpacity
-            style={[styles.aiSecondaryButton, { borderColor: colors.textSecondary }]}
+            style={[styles.aiSecondaryButton, neuSurface(scheme, 'raised')]}
             onPress={handleGoWithoutCopy}
           >
             <Text style={[styles.aiSecondaryButtonText, { color: colors.text }]}>
@@ -399,7 +377,7 @@ export default function RecipesScreen() {
       onRequestClose={() => setShowFilterModal(false)}
     >
       <View style={[styles.modalContainer, { backgroundColor: colors.background }]}>
-        <View style={styles.modalHeader}>
+        <View style={[styles.modalHeader, { borderBottomColor: colors.borderInset }]}>
           <TouchableOpacity onPress={() => setShowFilterModal(false)}>
             <Text style={[styles.modalCancel, { color: colors.textSecondary }]}>Cancelar</Text>
           </TouchableOpacity>
@@ -410,32 +388,18 @@ export default function RecipesScreen() {
         <ScrollView style={styles.modalContent} contentContainerStyle={styles.modalContentContainer}>
           <Text style={[styles.modalSectionTitle, { color: colors.text }]}>Tipo de comida</Text>
           <View style={styles.modalChipRow}>
-            <TouchableOpacity
-              style={[
-                styles.modalChip,
-                { borderColor: colors.textSecondary },
-                !mealTypeFilter && { backgroundColor: colors.primary, borderColor: colors.primary },
-              ]}
+            <ClayChip
+              label="Todas"
+              active={!mealTypeFilter}
               onPress={() => setMealTypeFilter(null)}
-            >
-              <Text style={[styles.modalChipText, !mealTypeFilter && styles.modalChipTextActive]}>
-                Todas
-              </Text>
-            </TouchableOpacity>
+            />
             {MEAL_TYPES.map((type) => (
-              <TouchableOpacity
+              <ClayChip
                 key={type}
-                style={[
-                  styles.modalChip,
-                  { borderColor: colors.textSecondary },
-                  mealTypeFilter === type && { backgroundColor: colors.primary, borderColor: colors.primary },
-                ]}
+                label={getMealTypeLabel(type)}
+                active={mealTypeFilter === type}
                 onPress={() => setMealTypeFilter(mealTypeFilter === type ? null : type)}
-              >
-                <Text style={[styles.modalChipText, mealTypeFilter === type && styles.modalChipTextActive]}>
-                  {getMealTypeLabel(type)}
-                </Text>
-              </TouchableOpacity>
+              />
             ))}
           </View>
 
@@ -446,34 +410,23 @@ export default function RecipesScreen() {
             Deselecciona los que no quieras usar
           </Text>
           <View style={styles.modalChipRow}>
-            {fridgeItems.filter(i => i.status !== 'empty').map((item) => {
-              const isSelected = selectedIngredients.includes(item.name);
-              return (
-                <TouchableOpacity
-                  key={item.id}
-                  style={[
-                    styles.ingredientChip,
-                    { borderColor: colors.textSecondary },
-                    isSelected && { backgroundColor: colors.primary, borderColor: colors.primary },
-                  ]}
-                  onPress={() => toggleIngredient(item.name)}
-                >
-                  <Text style={[styles.ingredientChipText, isSelected && styles.ingredientChipTextActive]}>
-                    {item.name}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
+            {fridgeItems.filter(i => i.status !== 'empty').map((item) => (
+              <ClayChip
+                key={item.id}
+                label={item.name}
+                active={selectedIngredients.includes(item.name)}
+                onPress={() => toggleIngredient(item.name)}
+              />
+            ))}
           </View>
         </ScrollView>
 
-        <View style={styles.modalFooter}>
-          <TouchableOpacity
-            style={[styles.suggestButton, { backgroundColor: colors.primary }]}
+        <View style={[styles.modalFooter, { borderTopColor: colors.borderInset }]}>
+          <ClayButton
             onPress={handleSuggest}
           >
-            <Text style={styles.suggestButtonText}>Buscar sugerencias</Text>
-          </TouchableOpacity>
+            Buscar sugerencias
+          </ClayButton>
         </View>
       </View>
     </Modal>
@@ -490,12 +443,12 @@ export default function RecipesScreen() {
           <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
             Crea tu primera receta para que el sistema pueda sugerirte qué cocinar con lo que tienes en la nevera.
           </Text>
-          <TouchableOpacity
-            style={[styles.emptyAction, { backgroundColor: colors.primary }]}
+          <ClayButton
             onPress={navigateToCreate}
+            style={{ marginTop: 20 }}
           >
-            <Text style={styles.emptyActionText}>Crear mi primera receta</Text>
-          </TouchableOpacity>
+            Crear mi primera receta
+          </ClayButton>
         </>
       ) : suggestedRecipes.length === 0 ? (
         <>
@@ -514,19 +467,16 @@ export default function RecipesScreen() {
   const renderSuggestionsTab = () => (
     <View style={styles.content}>
       <View style={styles.suggestRow}>
-        <TouchableOpacity
-          style={[styles.suggestMainButton, { backgroundColor: colors.primary }, suggesting && styles.buttonDisabled]}
+        <ClayButton
           onPress={handleSuggest}
           disabled={suggesting}
+          loading={suggesting}
+          style={{ flex: 1 }}
         >
-          {suggesting ? (
-            <ActivityIndicator color="#fff" size="small" />
-          ) : (
-            <Text style={styles.suggestMainButtonText}>🔍 Sugerir recetas</Text>
-          )}
-        </TouchableOpacity>
+          🔍 Sugerir recetas
+        </ClayButton>
         <TouchableOpacity
-          style={[styles.personalizeButton, { backgroundColor: colors.card, borderColor: colors.primary }]}
+          style={[styles.personalizeButton, neuSurface(scheme, 'raised')]}
           onPress={handleOpenPersonalize}
         >
           <Text style={[styles.personalizeButtonText, { color: colors.primary }]}>⚙️</Text>
@@ -534,7 +484,7 @@ export default function RecipesScreen() {
       </View>
 
       <TouchableOpacity
-        style={[styles.aiButton, { backgroundColor: colors.card, borderColor: colors.textSecondary }]}
+        style={[styles.aiButton, neuSurface(scheme, 'raised')]}
         onPress={handleOpenAI}
       >
         <Text style={[styles.aiButtonText, { color: colors.text }]}>
@@ -621,7 +571,7 @@ export default function RecipesScreen() {
 
       {/* FAB para crear receta */}
       <TouchableOpacity
-        style={[styles.fab, { backgroundColor: colors.primary }]}
+        style={[styles.fab, neuSurface(scheme, 'raised'), { backgroundColor: colors.primary }]}
         onPress={navigateToCreate}
         activeOpacity={0.8}
       >
@@ -654,27 +604,10 @@ const styles = StyleSheet.create({
   filtersContainer: {
     paddingHorizontal: 16,
     alignItems: 'center',
-    gap: 6,
   },
   filtersWrapper: {
     height: 36,
     marginBottom: 8,
-  },
-  filterChip: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
-    borderWidth: 1,
-    height: 28,
-    justifyContent: 'center',
-  },
-  filterChipText: {
-    fontSize: 12,
-    color: '#666',
-  },
-  filterChipTextActive: {
-    color: '#fff',
-    fontWeight: '600',
   },
   tabContainer: {
     flexDirection: 'row',
@@ -703,38 +636,21 @@ const styles = StyleSheet.create({
     gap: 10,
     marginBottom: 10,
   },
-  suggestMainButton: {
-    flex: 1,
-    paddingVertical: 14,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  suggestMainButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
   personalizeButton: {
     width: 50,
     height: 50,
-    borderRadius: 12,
+    borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1.5,
   },
   personalizeButtonText: {
     fontSize: 22,
   },
-  buttonDisabled: {
-    opacity: 0.6,
-  },
   aiButton: {
     marginHorizontal: 16,
     paddingVertical: 12,
-    borderRadius: 12,
+    borderRadius: 16,
     alignItems: 'center',
-    borderWidth: 1,
     marginBottom: 12,
   },
   aiButtonText: {
@@ -749,11 +665,6 @@ const styles = StyleSheet.create({
   list: {
     paddingHorizontal: 16,
     paddingBottom: 100,
-  },
-  recipeCard: {
-    padding: 16,
-    borderRadius: 12,
-    marginBottom: 12,
   },
   recipeHeader: {
     flexDirection: 'row',
@@ -834,17 +745,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 22,
   },
-  emptyAction: {
-    marginTop: 20,
-    paddingVertical: 14,
-    paddingHorizontal: 24,
-    borderRadius: 12,
-  },
-  emptyActionText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
@@ -859,11 +759,6 @@ const styles = StyleSheet.create({
     borderRadius: 28,
     justifyContent: 'center',
     alignItems: 'center',
-    elevation: 6,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.27,
-    shadowRadius: 4.65,
   },
   fabText: {
     color: '#fff',
@@ -917,48 +812,10 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: 8,
   },
-  modalChip: {
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 20,
-    borderWidth: 1.5,
-  },
-  modalChipText: {
-    fontSize: 14,
-    color: '#666',
-  },
-  modalChipTextActive: {
-    color: '#fff',
-    fontWeight: '600',
-  },
-  ingredientChip: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 16,
-    borderWidth: 1.5,
-  },
-  ingredientChipText: {
-    fontSize: 14,
-    color: '#666',
-  },
-  ingredientChipTextActive: {
-    color: '#fff',
-    fontWeight: '600',
-  },
   modalFooter: {
     padding: 16,
     borderTopWidth: 1,
     borderTopColor: 'rgba(0,0,0,0.1)',
-  },
-  suggestButton: {
-    paddingVertical: 16,
-    borderRadius: 12,
-    alignItems: 'center',
-  },
-  suggestButtonText: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: 'bold',
   },
   aiIngredientsPreview: {
     fontSize: 14,
@@ -966,7 +823,7 @@ const styles = StyleSheet.create({
   },
   jsonPreview: {
     padding: 12,
-    borderRadius: 10,
+    borderRadius: 12,
     marginTop: 8,
   },
   jsonPreviewText: {
@@ -976,9 +833,8 @@ const styles = StyleSheet.create({
   },
   aiSecondaryButton: {
     paddingVertical: 14,
-    borderRadius: 12,
+    borderRadius: 14,
     alignItems: 'center',
-    borderWidth: 1,
     marginTop: 10,
   },
   aiSecondaryButtonText: {

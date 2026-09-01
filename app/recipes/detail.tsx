@@ -1,5 +1,7 @@
+import { ClayButton } from '@/components/clay';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { neuShadow, neuSurface } from '@/lib/neumorphic';
 import { useAuthStore } from '@/stores/authStore';
 import { useRecipesStore } from '@/stores/recipesStore';
 import { useRouter } from 'expo-router';
@@ -46,7 +48,8 @@ const formatDate = (dateStr: string): string => {
 export default function RecipeDetailScreen() {
   const router = useRouter();
   const colorScheme = useColorScheme();
-  const colors = Colors[(colorScheme ?? 'light') as keyof typeof Colors];
+  const scheme = (colorScheme ?? 'light') as 'light' | 'dark';
+  const colors = Colors[scheme];
   const { user } = useAuthStore();
   const { selectedRecipe, selectedRecipeSavedId, savedRecipes, saveRecipe, markAsCooked, deleteSavedRecipe, loading } = useRecipesStore();
 
@@ -114,7 +117,7 @@ export default function RecipeDetailScreen() {
         </TouchableOpacity>
         {isSaved && selectedRecipeSavedId && (
           <TouchableOpacity onPress={handleDelete}>
-            <Text style={styles.deleteText}>Eliminar</Text>
+            <Text style={[styles.deleteText, { color: colors.danger }]}>Eliminar</Text>
           </TouchableOpacity>
         )}
       </View>
@@ -129,21 +132,21 @@ export default function RecipeDetailScreen() {
 
         <View style={styles.metaRow}>
           {selectedRecipe.servings && (
-            <View style={[styles.metaChip, { backgroundColor: colors.card }]}>
+            <View style={[styles.metaChip, neuSurface(scheme, 'raised'), { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16 }]}>
               <Text style={[styles.metaChipText, { color: colors.textSecondary }]}>
                 🍽 {selectedRecipe.servings} {selectedRecipe.servings === 1 ? 'porción' : 'porciones'}
               </Text>
             </View>
           )}
           {selectedRecipe.prep_time_minutes && (
-            <View style={[styles.metaChip, { backgroundColor: colors.card }]}>
+            <View style={[styles.metaChip, neuSurface(scheme, 'raised'), { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16 }]}>
               <Text style={[styles.metaChipText, { color: colors.textSecondary }]}>
                 ⏱ {selectedRecipe.prep_time_minutes} min
               </Text>
             </View>
           )}
           {selectedRecipe.difficulty && (
-            <View style={[styles.metaChip, { backgroundColor: colors.card }]}>
+            <View style={[styles.metaChip, neuSurface(scheme, 'raised'), { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16 }]}>
               <Text style={[styles.metaChipText, { color: colors.textSecondary }]}>
                 📊 {selectedRecipe.difficulty}
               </Text>
@@ -175,7 +178,7 @@ export default function RecipeDetailScreen() {
           <Text style={[styles.sectionTitle, { color: colors.text }]}>Pasos</Text>
           {selectedRecipe.steps.map((step, index) => (
             <View key={index} style={styles.stepRow}>
-              <View style={[styles.stepNumber, { backgroundColor: colors.tint }]}>
+              <View style={[styles.stepNumber, { backgroundColor: colors.tint }, neuShadow(scheme, 'raised')]}>
                 <Text style={styles.stepNumberText}>{index + 1}</Text>
               </View>
               <Text style={[styles.stepText, { color: colors.textSecondary }]}>{step}</Text>
@@ -194,7 +197,7 @@ export default function RecipeDetailScreen() {
 
         <View style={styles.actionsContainer}>
           {isSaved && lastCookedAt && (
-            <View style={[styles.cookedInfoBanner, { backgroundColor: colors.card }]}>
+            <View style={[styles.cookedInfoBanner, neuSurface(scheme, 'flat'), { alignItems: 'center' }]}>
               <Text style={[styles.cookedInfoText, { color: colors.text }]}>
                 ✅ Última preparación: {formatDate(lastCookedAt)}
               </Text>
@@ -202,25 +205,21 @@ export default function RecipeDetailScreen() {
           )}
 
           {isSaved && (
-            <TouchableOpacity
-              style={[styles.cookedButton, { backgroundColor: lastCookedAt ? '#8BC34A' : '#FF9800' }]}
-              onPress={handleMarkCooked}
-              disabled={loading}
-            >
-              <Text style={styles.actionButtonText}>
+            <View style={[neuSurface(scheme, 'raised'), { backgroundColor: lastCookedAt ? '#8BC34A' : '#FF9800', borderRadius: 12 }]}>
+              <ClayButton
+                variant="secondary"
+                onPress={handleMarkCooked}
+                disabled={loading}
+              >
                 {lastCookedAt ? '🍳 Preparar de nuevo' : '🍳 Ya la preparé'}
-              </Text>
-            </TouchableOpacity>
+              </ClayButton>
+            </View>
           )}
 
           {!isSaved && (
-            <TouchableOpacity
-              style={[styles.saveButton, { backgroundColor: colors.primary }]}
-              onPress={handleSave}
-              disabled={loading}
-            >
-              <Text style={styles.actionButtonText}>Guardar Receta</Text>
-            </TouchableOpacity>
+            <ClayButton variant="primary" onPress={handleSave} disabled={loading}>
+              Guardar Receta
+            </ClayButton>
           )}
         </View>
       </ScrollView>
@@ -244,7 +243,6 @@ const styles = StyleSheet.create({
     fontSize: 18,
   },
   deleteText: {
-    color: 'red',
     fontSize: 16,
   },
   content: {
@@ -281,11 +279,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     flexWrap: 'wrap',
   },
-  metaChip: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
-  },
+  metaChip: {},
   metaChipText: {
     fontSize: 14,
   },
@@ -331,28 +325,11 @@ const styles = StyleSheet.create({
     gap: 12,
     marginTop: 20,
   },
-  saveButton: {
-    padding: 16,
-    borderRadius: 12,
-    alignItems: 'center',
-  },
-  cookedButton: {
-    padding: 16,
-    borderRadius: 12,
-    alignItems: 'center',
-  },
   cookedInfoBanner: {
     padding: 14,
-    borderRadius: 12,
-    alignItems: 'center',
   },
   cookedInfoText: {
     fontSize: 15,
     fontWeight: '600',
-  },
-  actionButtonText: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: 'bold',
   },
 });

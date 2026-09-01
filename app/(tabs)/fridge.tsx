@@ -1,4 +1,6 @@
 import { Colors } from "@/constants/theme";
+import { ClayChip } from "@/components/clay";
+import { neuInset, neuSurface } from "@/lib/neumorphic";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useAuthStore } from "@/stores/authStore";
 import { useFridgeStore } from "@/stores/fridgeStore";
@@ -21,21 +23,22 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-const statusColor: Record<Status, string> = {
-  available: "#4CAF50",
-  low: "#FFA500",
-  empty: "#FF4444",
-};
-
 export default function FridgeScreen() {
   const router = useRouter();
   const colorScheme = useColorScheme();
-  const colors = Colors[(colorScheme ?? "light") as keyof typeof Colors];
+  const scheme = (colorScheme ?? "light") as "light" | "dark";
+  const colors = Colors[scheme];
   const { user } = useAuthStore();
   const { items, fetchItems, deleteItem } = useFridgeStore();
   const [refreshing, setRefreshing] = useState(false);
   const [selectedCat, setSelectedCat] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+
+  const statusColor: Record<Status, string> = {
+    available: colors.success,
+    low: colors.warning,
+    empty: colors.danger,
+  };
 
   const normalizedQuery = useMemo(() => searchQuery.trim().toLowerCase(), [searchQuery]);
 
@@ -125,7 +128,7 @@ export default function FridgeScreen() {
 
   const renderItem = ({ item }: { item: FridgeItem }) => (
     <TouchableOpacity
-      style={[styles.itemCard, { backgroundColor: colors.card }]}
+      style={[styles.itemCard, neuSurface(scheme, "raised")]}
       onPress={() => router.push(`/fridge/${item.id}` as any)}
       onLongPress={() => handleDelete(item.id, item.name)}
     >
@@ -163,24 +166,31 @@ export default function FridgeScreen() {
       <View style={styles.header}>
         <Text style={[styles.title, { color: colors.text }]}>Mi Despensa</Text>
         <View style={styles.headerActions}>
-          <TouchableOpacity
-            style={[styles.exportButton, { backgroundColor: colors.card }]}
-            onPress={handleExportJSON}
+          <View style={[styles.exportButton, neuSurface(scheme, "raised")]}>
+            <TouchableOpacity onPress={handleExportJSON}>
+              <Text style={[styles.exportButtonText, { color: colors.primaryDark }]}>↗ Exportar</Text>
+            </TouchableOpacity>
+          </View>
+          <View
+            style={[
+              styles.addButton,
+              neuSurface(scheme, "raised"),
+              { backgroundColor: colors.primary },
+            ]}
           >
-            <Text style={[styles.exportButtonText, { color: colors.primary }]}>↗ Exportar</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.addButton, { backgroundColor: colors.primary }]}
-            onPress={() => router.push("/fridge/add" as any)}
-          >
-            <Text style={styles.addButtonText}>+</Text>
-          </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.addButtonTouchable}
+              onPress={() => router.push("/fridge/add" as any)}
+            >
+              <Text style={styles.addButtonText}>+</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </View>
 
       <View style={styles.searchContainer}>
         <TextInput
-          style={[styles.searchInput, { backgroundColor: colors.card, color: colors.text }]}
+          style={[styles.searchInput, neuInset(scheme) as any]}
           value={searchQuery}
           onChangeText={setSearchQuery}
           placeholder="Buscar alimento..."
@@ -205,47 +215,21 @@ export default function FridgeScreen() {
           style={styles.tabBar}
           contentContainerStyle={styles.tabBarContent}
         >
-          <TouchableOpacity
-            style={[
-              styles.tab,
-              { backgroundColor: colors.card },
-              !selectedCat && { backgroundColor: colors.primary },
-            ]}
+          <ClayChip
+            label="Todas"
+            active={!selectedCat}
             onPress={() => setSelectedCat(null)}
-          >
-            <Text
-              style={[
-                styles.tabText,
-                { color: colors.text },
-                !selectedCat && { color: "#fff" },
-              ]}
-            >
-              Todas
-            </Text>
-          </TouchableOpacity>
+          />
           {CATEGORIES.map((cat) => {
             const count = catTabItems.get(cat);
             if (!count) return null;
             return (
-              <TouchableOpacity
+              <ClayChip
                 key={cat}
-                style={[
-                  styles.tab,
-                  { backgroundColor: colors.card },
-                  selectedCat === cat && { backgroundColor: colors.primary },
-                ]}
+                label={cat}
+                active={selectedCat === cat}
                 onPress={() => setSelectedCat(cat)}
-              >
-                <Text
-                  style={[
-                    styles.tabText,
-                    { color: colors.text },
-                    selectedCat === cat && { color: "#fff" },
-                  ]}
-                >
-                  {cat}
-                </Text>
-              </TouchableOpacity>
+              />
             );
           })}
         </ScrollView>
@@ -314,6 +298,12 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
+  addButtonTouchable: {
+    width: "100%",
+    height: "100%",
+    justifyContent: "center",
+    alignItems: "center",
+  },
   addButtonText: {
     fontSize: 24,
     color: "#fff",
@@ -325,7 +315,7 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   exportButton: {
-    paddingHorizontal: 12,
+    paddingHorizontal: 16,
     height: 40,
     borderRadius: 20,
     justifyContent: "center",
@@ -344,8 +334,6 @@ const styles = StyleSheet.create({
   searchInput: {
     padding: 14,
     paddingRight: 40,
-    borderRadius: 10,
-    fontSize: 16,
   },
   clearButton: {
     position: "absolute",
@@ -383,18 +371,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     minHeight: 46,
-  },
-  tab: {
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    justifyContent: "center",
-    borderRadius: 20,
-    minWidth: 64,
-    alignItems: "center",
-  },
-  tabText: {
-    fontSize: 14,
-    textTransform: "capitalize",
   },
   sectionHeader: {
     flexDirection: "row",

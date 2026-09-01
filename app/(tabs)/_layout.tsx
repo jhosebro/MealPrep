@@ -7,11 +7,14 @@ import { IconSymbol } from '@/components/ui/icon-symbol';
 import { WebLayoutShell } from '@/components/web-layout-shell';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { neuShadow } from '@/lib/neumorphic';
 import { useAuthStore } from '@/stores/authStore';
 import { BREAKPOINTS } from '@/types';
 
 export default function TabLayout() {
   const colorScheme = useColorScheme();
+  const scheme = (colorScheme ?? 'light') as 'light' | 'dark';
+  const colors = Colors[scheme];
   const { user, initialized, initialize } = useAuthStore();
   const router = useRouter();
   const { width } = useWindowDimensions();
@@ -45,14 +48,26 @@ export default function TabLayout() {
     );
   }
 
+  const tabShadow = Platform.OS === 'android'
+    ? { elevation: 8 }
+    : neuShadow(scheme, 'raised');
+
   return (
     <WebLayoutShell>
       <Tabs
         screenOptions={{
-          tabBarActiveTintColor: Colors[(colorScheme ?? 'light') as 'light' | 'dark'].primary,
+          tabBarActiveTintColor: colors.primary,
+          tabBarInactiveTintColor: colors.tabIconDefault,
           headerShown: false,
           tabBarButton: HapticTab,
-          tabBarStyle: hideTabBar ? { display: 'none' } : undefined,
+          tabBarStyle: hideTabBar
+            ? { display: 'none' }
+            : {
+                backgroundColor: colors.surface,
+                borderTopWidth: 0,
+                paddingTop: 6,
+                ...tabShadow,
+              },
         }}>
         <Tabs.Screen
           name="home"

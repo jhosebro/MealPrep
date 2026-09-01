@@ -10,6 +10,9 @@ import {
     Recipe,
     RECIPE_JSON_TEMPLATE,
 } from '@/types';
+import { ClayButton } from '@/components/clay/Button';
+import { ClayChip } from '@/components/clay/Chip';
+import { neuSurface, neuInset } from '@/lib/neumorphic';
 import * as Clipboard from 'expo-clipboard';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
@@ -38,16 +41,16 @@ type CreateMode = 'manual' | 'json';
 export default function CreateRecipeScreen() {
   const router = useRouter();
   const colorScheme = useColorScheme();
-  const colors = Colors[colorScheme ?? 'light'];
+  const scheme = (colorScheme ?? 'light') as 'light' | 'dark';
+  const colors = Colors[scheme];
   const { user } = useAuthStore();
   const { saveRecipe, loading } = useRecipesStore();
+  const inset = neuInset(scheme) as any;
 
   const [mode, setMode] = useState<CreateMode>('json');
 
-  // JSON mode state
   const [jsonText, setJsonText] = useState('');
 
-  // Manual mode state
   const [title, setTitle] = useState('');
   const [mealType, setMealType] = useState<MealType>('almuerzo');
   const [servings, setServings] = useState('2');
@@ -172,22 +175,22 @@ export default function CreateRecipeScreen() {
       <TouchableOpacity
         style={[
           styles.modeButton,
-          mode === 'json' && { backgroundColor: colors.primary },
+          neuSurface(scheme, mode === 'json' ? 'pressed' : 'raised'),
         ]}
         onPress={() => setMode('json')}
       >
-        <Text style={[styles.modeButtonText, mode === 'json' && styles.modeButtonTextActive]}>
+        <Text style={[styles.modeButtonText, mode === 'json' && { color: '#fff' }]}>
           Importar JSON
         </Text>
       </TouchableOpacity>
       <TouchableOpacity
         style={[
           styles.modeButton,
-          mode === 'manual' && { backgroundColor: colors.primary },
+          neuSurface(scheme, mode === 'manual' ? 'pressed' : 'raised'),
         ]}
         onPress={() => setMode('manual')}
       >
-        <Text style={[styles.modeButtonText, mode === 'manual' && styles.modeButtonTextActive]}>
+        <Text style={[styles.modeButtonText, mode === 'manual' && { color: '#fff' }]}>
           Manual
         </Text>
       </TouchableOpacity>
@@ -197,19 +200,19 @@ export default function CreateRecipeScreen() {
   const renderJsonMode = () => (
     <View style={styles.formSection}>
       <TouchableOpacity
-        style={[styles.templateButton, { backgroundColor: colors.card, borderColor: colors.primary }]}
+        style={[styles.templateButton, neuSurface(scheme, 'raised'), { borderColor: colors.primary }]}
         onPress={handleCopyTemplate}
       >
         <Text style={[styles.templateButtonText, { color: colors.primary }]}>
-          📋 Copiar plantilla JSON
+          Copiar plantilla JSON
         </Text>
       </TouchableOpacity>
 
       <Text style={[styles.label, { color: colors.text }]}>Pega el JSON de la receta:</Text>
       <TextInput
         style={[
-          styles.jsonInput,
-          { backgroundColor: colors.card, color: colors.text, borderColor: colors.textSecondary },
+          inset,
+          { color: colors.text, fontSize: 16, padding: 14, borderRadius: 10, minHeight: 200, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' } as any,
         ]}
         multiline
         placeholder={`{\n  "title": "Mi receta",\n  "meal_type": "almuerzo",\n  ...\n}`}
@@ -221,15 +224,9 @@ export default function CreateRecipeScreen() {
         autoCorrect={false}
       />
 
-      <TouchableOpacity
-        style={[styles.saveButton, { backgroundColor: colors.primary }]}
-        onPress={handleSaveJson}
-        disabled={loading}
-      >
-        <Text style={styles.saveButtonText}>
-          {loading ? 'Guardando...' : 'Validar y Guardar'}
-        </Text>
-      </TouchableOpacity>
+      <ClayButton onPress={handleSaveJson} disabled={loading} loading={loading}>
+        {loading ? 'Guardando...' : 'Validar y Guardar'}
+      </ClayButton>
     </View>
   );
 
@@ -237,7 +234,7 @@ export default function CreateRecipeScreen() {
     <View style={styles.formSection}>
       <Text style={[styles.label, { color: colors.text }]}>Nombre de la receta *</Text>
       <TextInput
-        style={[styles.input, { backgroundColor: colors.card, color: colors.text, borderColor: colors.textSecondary }]}
+        style={[inset, { color: colors.text, fontSize: 16, padding: 14, borderRadius: 10 }]}
         placeholder="Ej: Arroz con pollo"
         placeholderTextColor={colors.textSecondary}
         value={title}
@@ -247,19 +244,12 @@ export default function CreateRecipeScreen() {
       <Text style={[styles.label, { color: colors.text }]}>Tipo de comida *</Text>
       <View style={styles.chipRow}>
         {MEAL_TYPES.map((type) => (
-          <TouchableOpacity
+          <ClayChip
             key={type}
-            style={[
-              styles.chip,
-              { borderColor: colors.textSecondary },
-              mealType === type && { backgroundColor: colors.primary, borderColor: colors.primary },
-            ]}
+            label={type}
+            active={mealType === type}
             onPress={() => setMealType(type)}
-          >
-            <Text style={[styles.chipText, mealType === type && styles.chipTextActive]}>
-              {type}
-            </Text>
-          </TouchableOpacity>
+          />
         ))}
       </View>
 
@@ -267,7 +257,7 @@ export default function CreateRecipeScreen() {
         <View style={styles.halfField}>
           <Text style={[styles.label, { color: colors.text }]}>Porciones *</Text>
           <TextInput
-            style={[styles.input, { backgroundColor: colors.card, color: colors.text, borderColor: colors.textSecondary }]}
+            style={[inset, { color: colors.text, fontSize: 16, padding: 14, borderRadius: 10 }]}
             placeholder="2"
             placeholderTextColor={colors.textSecondary}
             value={servings}
@@ -278,7 +268,7 @@ export default function CreateRecipeScreen() {
         <View style={styles.halfField}>
           <Text style={[styles.label, { color: colors.text }]}>Tiempo (min)</Text>
           <TextInput
-            style={[styles.input, { backgroundColor: colors.card, color: colors.text, borderColor: colors.textSecondary }]}
+            style={[inset, { color: colors.text, fontSize: 16, padding: 14, borderRadius: 10 }]}
             placeholder="20"
             placeholderTextColor={colors.textSecondary}
             value={prepTime}
@@ -291,25 +281,18 @@ export default function CreateRecipeScreen() {
       <Text style={[styles.label, { color: colors.text }]}>Dificultad</Text>
       <View style={styles.chipRow}>
         {DIFFICULTIES.map((d) => (
-          <TouchableOpacity
+          <ClayChip
             key={d}
-            style={[
-              styles.chip,
-              { borderColor: colors.textSecondary },
-              difficulty === d && { backgroundColor: colors.primary, borderColor: colors.primary },
-            ]}
+            label={d}
+            active={difficulty === d}
             onPress={() => setDifficulty(d)}
-          >
-            <Text style={[styles.chipText, difficulty === d && styles.chipTextActive]}>
-              {d}
-            </Text>
-          </TouchableOpacity>
+          />
         ))}
       </View>
 
       <Text style={[styles.label, { color: colors.text }]}>Ingredientes * (uno por línea)</Text>
       <TextInput
-        style={[styles.textArea, { backgroundColor: colors.card, color: colors.text, borderColor: colors.textSecondary }]}
+        style={[inset, { color: colors.text, fontSize: 16, padding: 14, borderRadius: 10, minHeight: 120 }]}
         multiline
         placeholder={"2 huevos\n1 taza de arroz\nsal al gusto"}
         placeholderTextColor={colors.textSecondary}
@@ -320,7 +303,7 @@ export default function CreateRecipeScreen() {
 
       <Text style={[styles.label, { color: colors.text }]}>Pasos * (uno por línea)</Text>
       <TextInput
-        style={[styles.textArea, { backgroundColor: colors.card, color: colors.text, borderColor: colors.textSecondary }]}
+        style={[inset, { color: colors.text, fontSize: 16, padding: 14, borderRadius: 10, minHeight: 120 }]}
         multiline
         placeholder={"Calentar el aceite en un sartén\nAgregar los ingredientes\nCocinar por 10 minutos"}
         placeholderTextColor={colors.textSecondary}
@@ -331,22 +314,16 @@ export default function CreateRecipeScreen() {
 
       <Text style={[styles.label, { color: colors.text }]}>Notas (opcional)</Text>
       <TextInput
-        style={[styles.input, { backgroundColor: colors.card, color: colors.text, borderColor: colors.textSecondary }]}
+        style={[inset, { color: colors.text, fontSize: 16, padding: 14, borderRadius: 10 }]}
         placeholder="Notas personales..."
         placeholderTextColor={colors.textSecondary}
         value={notes}
         onChangeText={setNotes}
       />
 
-      <TouchableOpacity
-        style={[styles.saveButton, { backgroundColor: colors.primary }]}
-        onPress={handleSaveManual}
-        disabled={loading}
-      >
-        <Text style={styles.saveButtonText}>
-          {loading ? 'Guardando...' : 'Guardar Receta'}
-        </Text>
-      </TouchableOpacity>
+      <ClayButton onPress={handleSaveManual} disabled={loading} loading={loading}>
+        {loading ? 'Guardando...' : 'Guardar Receta'}
+      </ClayButton>
     </View>
   );
 
@@ -407,22 +384,20 @@ const styles = StyleSheet.create({
   modeToggle: {
     flexDirection: 'row',
     marginBottom: 20,
-    borderRadius: 12,
+    borderRadius: 16,
     overflow: 'hidden',
+    gap: 10,
   },
   modeButton: {
     flex: 1,
     paddingVertical: 12,
     alignItems: 'center',
-    backgroundColor: 'rgba(0,0,0,0.05)',
+    borderRadius: 16,
   },
   modeButtonText: {
     fontSize: 15,
     fontWeight: '600',
     color: '#666',
-  },
-  modeButtonTextActive: {
-    color: '#fff',
   },
   formSection: {
     gap: 12,
@@ -444,30 +419,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginTop: 4,
   },
-  input: {
-    borderWidth: 1,
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    fontSize: 16,
-  },
-  textArea: {
-    borderWidth: 1,
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    fontSize: 16,
-    minHeight: 120,
-  },
-  jsonInput: {
-    borderWidth: 1,
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    fontSize: 14,
-    minHeight: 200,
-    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
-  },
   row: {
     flexDirection: 'row',
     gap: 12,
@@ -479,30 +430,5 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 8,
     flexWrap: 'wrap',
-  },
-  chip: {
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 20,
-    borderWidth: 1.5,
-  },
-  chipText: {
-    fontSize: 14,
-    color: '#666',
-    textTransform: 'capitalize',
-  },
-  chipTextActive: {
-    color: '#fff',
-  },
-  saveButton: {
-    paddingVertical: 16,
-    borderRadius: 12,
-    alignItems: 'center',
-    marginTop: 12,
-  },
-  saveButtonText: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: 'bold',
   },
 });

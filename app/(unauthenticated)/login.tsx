@@ -5,12 +5,15 @@ import { useAuthStore } from '@/stores/authStore';
 import { BREAKPOINTS, RESPONSIVE_DEFAULTS } from '@/types';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Platform, StyleSheet, Text, TextInput, TouchableOpacity, useWindowDimensions, View } from 'react-native';
+import { Alert, Platform, StyleSheet, Text, TextInput, TouchableOpacity, useWindowDimensions, View } from 'react-native';
+import { ClayButton } from '@/components/clay';
+import { neuSurface, neuInset } from '@/lib/neumorphic';
 
 export default function LoginScreen() {
   const router = useRouter();
   const colorScheme = useColorScheme();
-  const colors = Colors[colorScheme === 'dark' ? 'dark' : 'light'];
+  const scheme = colorScheme === 'dark' ? 'dark' : 'light';
+  const colors = Colors[scheme];
   const { user, initialize, signIn, signUp, loading } = useAuthStore();
 
   const { width } = useWindowDimensions();
@@ -93,7 +96,7 @@ export default function LoginScreen() {
 
       <View style={styles.form}>
         <TextInput
-          style={[styles.input, { backgroundColor: colors.card, color: colors.text }]}
+          style={[neuInset(scheme), { padding: 16, borderRadius: 12, fontSize: 16, marginBottom: 16, color: colors.text }]}
           placeholder="Email"
           placeholderTextColor={colors.textSecondary}
           value={email}
@@ -102,7 +105,7 @@ export default function LoginScreen() {
           keyboardType="email-address"
         />
         <TextInput
-          style={[styles.input, { backgroundColor: colors.card, color: colors.text }]}
+          style={[neuInset(scheme), { padding: 16, borderRadius: 12, fontSize: 16, marginBottom: 16, color: colors.text }]}
           placeholder="Contraseña"
           placeholderTextColor={colors.textSecondary}
           value={password}
@@ -110,11 +113,11 @@ export default function LoginScreen() {
           secureTextEntry
         />
 
-        {error ? <Text style={styles.error}>{error}</Text> : null}
+        {error ? <Text style={[styles.error, { color: colors.danger }]}>{error}</Text> : null}
 
         {bioAvailable && (
           <TouchableOpacity
-            style={[styles.biometricButton, { borderColor: colors.primary }]}
+            style={[neuSurface(scheme, 'raised'), { borderWidth: 1.5, borderColor: colors.primary, padding: 14, borderRadius: 12, alignItems: 'center', marginBottom: 16 }]}
             onPress={handleBiometricLogin}
           >
             <Text style={{ color: colors.primary, fontSize: 16, fontWeight: '600' }}>
@@ -123,19 +126,9 @@ export default function LoginScreen() {
           </TouchableOpacity>
         )}
 
-        <TouchableOpacity
-          style={[styles.button, { backgroundColor: colors.primary }]}
-          onPress={handleSubmit}
-          disabled={loading}
-        >
-          {loading ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <Text style={styles.buttonText}>
-              {isSignUp ? 'Registrarse' : 'Iniciar sesión'}
-            </Text>
-          )}
-        </TouchableOpacity>
+        <ClayButton onPress={handleSubmit} disabled={loading}>
+          {isSignUp ? 'Registrarse' : 'Iniciar sesión'}
+        </ClayButton>
 
         <TouchableOpacity
           style={styles.switchButton}
@@ -152,7 +145,7 @@ export default function LoginScreen() {
   if (isDesktop) {
     return (
       <View style={[styles.container, styles.desktopContainer, { backgroundColor: colors.background }]}>
-        <View style={[styles.card, { backgroundColor: colors.card }, Platform.OS === 'web' && { boxShadow: '0px 2px 8px rgba(0, 0, 0, 0.2)' } as any]}>
+        <View style={[neuSurface(scheme, 'raised'), { maxWidth: RESPONSIVE_DEFAULTS.loginCardMaxWidth, width: '100%', padding: 32 }]}>
           {formContent}
         </View>
       </View>
@@ -175,12 +168,6 @@ const styles = StyleSheet.create({
   desktopContainer: {
     alignItems: 'center',
   },
-  card: {
-    maxWidth: RESPONSIVE_DEFAULTS.loginCardMaxWidth,
-    width: '100%',
-    borderRadius: 12,
-    padding: 32,
-  },
   title: {
     fontSize: 32,
     fontWeight: 'bold',
@@ -195,33 +182,9 @@ const styles = StyleSheet.create({
   form: {
     width: '100%',
   },
-  input: {
-    padding: 16,
-    borderRadius: 12,
-    fontSize: 16,
-    marginBottom: 16,
-  },
   error: {
-    color: 'red',
     textAlign: 'center',
     marginBottom: 16,
-  },
-  button: {
-    padding: 16,
-    borderRadius: 12,
-    alignItems: 'center',
-  },
-  biometricButton: {
-    borderWidth: 1.5,
-    padding: 14,
-    borderRadius: 12,
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  buttonText: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: 'bold',
   },
   switchButton: {
     marginTop: 20,
