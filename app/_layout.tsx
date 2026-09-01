@@ -2,6 +2,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useEffect } from "react";
+import { Platform } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import "react-native-url-polyfill/auto";
 
@@ -12,6 +13,20 @@ const SESSION_KEY = "app_session";
 
 export default function RootLayout() {
   useEffect(() => {
+    // On web, handle OAuth redirect code exchange
+    if (Platform.OS === "web") {
+      const url = new URL(window.location.href);
+      const code = url.searchParams.get("code");
+
+      if (code) {
+        supabase.auth.exchangeCodeForSession(code).then(({ data, error }) => {
+          if (!error && data.session) {
+            window.history.replaceState({}, "", url.pathname);
+          }
+        });
+      }
+    }
+
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, session) => {

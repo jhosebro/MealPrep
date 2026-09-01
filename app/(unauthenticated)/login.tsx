@@ -1,11 +1,12 @@
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { signInWithGoogle } from '@/services/googleAuth';
 import { biometricService } from '@/services/biometricService';
 import { useAuthStore } from '@/stores/authStore';
 import { BREAKPOINTS, RESPONSIVE_DEFAULTS } from '@/types';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Alert, Platform, StyleSheet, Text, TextInput, TouchableOpacity, useWindowDimensions, View } from 'react-native';
+import { ActivityIndicator, Alert, Platform, StyleSheet, Text, TextInput, TouchableOpacity, useWindowDimensions, View } from 'react-native';
 import { ClayButton } from '@/components/clay';
 import { neuSurface, neuInset } from '@/lib/neumorphic';
 
@@ -24,6 +25,7 @@ export default function LoginScreen() {
   const [isSignUp, setIsSignUp] = useState(false);
   const [error, setError] = useState('');
   const [bioAvailable, setBioAvailable] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
 
   useEffect(() => {
     biometricService.isAvailable().then(setBioAvailable);
@@ -35,6 +37,21 @@ export default function LoginScreen() {
       router.replace('/(tabs)/home');
     }
   }, [user]);
+
+  const handleGoogleLogin = async () => {
+    setError('');
+    setGoogleLoading(true);
+    try {
+      const result = await signInWithGoogle();
+      if (!result.success && result.error) {
+        setError(result.error);
+      }
+    } catch {
+      setError('Error de conexión con Google.');
+    } finally {
+      setGoogleLoading(false);
+    }
+  };
 
   const handleSubmit = async () => {
     if (!email || !password) {
@@ -93,6 +110,31 @@ export default function LoginScreen() {
       <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
         {isSignUp ? 'Crea una cuenta' : 'Inicia sesión'}
       </Text>
+
+      <TouchableOpacity
+        style={[neuSurface(scheme, 'raised'), styles.googleButton]}
+        onPress={handleGoogleLogin}
+        disabled={googleLoading}
+        accessibilityLabel={isSignUp ? 'Registrarse con Google' : 'Continuar con Google'}
+        accessibilityRole="button"
+      >
+        {googleLoading ? (
+          <ActivityIndicator color="#333" />
+        ) : (
+          <>
+            <Text style={styles.googleIcon}>G</Text>
+            <Text style={[styles.googleButtonText, { color: colors.text }]}>
+              {isSignUp ? 'Registrarse con Google' : 'Continuar con Google'}
+            </Text>
+          </>
+        )}
+      </TouchableOpacity>
+
+      <View style={styles.divider}>
+        <View style={[styles.dividerLine, { backgroundColor: colors.borderInset }]} />
+        <Text style={[styles.dividerText, { color: colors.textSecondary }]}>o</Text>
+        <View style={[styles.dividerLine, { backgroundColor: colors.borderInset }]} />
+      </View>
 
       <View style={styles.form}>
         <TextInput
@@ -192,5 +234,37 @@ const styles = StyleSheet.create({
   },
   switchText: {
     fontSize: 16,
+  },
+  googleButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: 24,
+    borderRadius: 14,
+    gap: 10,
+    marginBottom: 16,
+  },
+  googleIcon: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#4285F4',
+  },
+  googleButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  divider: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+  },
+  dividerText: {
+    marginHorizontal: 12,
+    fontSize: 13,
   },
 });
