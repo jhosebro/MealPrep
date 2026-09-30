@@ -14,6 +14,7 @@ import {
   Modal,
   Platform,
   Pressable,
+  ScrollView,
   StyleSheet,
   Switch,
   Text,
@@ -45,7 +46,11 @@ export default function HomeScreen() {
     biometricService.isEnabled().then(setBiometricEnabled);
   }, []);
 
-  const ingredientNames = items.map((item) => item.name);
+  const availableItems = useMemo(() => {
+    return items.filter((item) => item.status !== "empty");
+  }, [items]);
+
+  const ingredientNames = availableItems.map((item) => item.name);
 
   const nearDepletion = useMemo(() => {
     return items.filter((item) => {
@@ -152,6 +157,11 @@ export default function HomeScreen() {
         </View>
       </Modal>
 
+      <ScrollView
+        style={styles.scrollContainer}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
       <View style={styles.content}>
         <Pressable onPress={() => router.push('/(tabs)/fridge')}>
           <ClayCard style={styles.card}>
@@ -207,13 +217,13 @@ export default function HomeScreen() {
         </View>
       )}
 
-      {items.length > 0 && (
+      {availableItems.length > 0 && (
         <View style={styles.section}>
           <Text style={[styles.sectionTitle, { color: colors.text }]}>
             Ingredientes disponibles
           </Text>
           <FlatList
-            data={items.slice(0, 5)}
+            data={availableItems.slice(0, 5)}
             horizontal
             showsHorizontalScrollIndicator={false}
             renderItem={({ item }) => (
@@ -225,15 +235,16 @@ export default function HomeScreen() {
             )}
             keyExtractor={(item) => item.id}
             ListFooterComponent={
-              items.length > 5 ? (
+              availableItems.length > 5 ? (
                 <Text style={[styles.moreText, { color: colors.textSecondary }]}>
-                  +{items.length - 5} más
+                  +{availableItems.length - 5} más
                 </Text>
               ) : null
             }
           />
         </View>
       )}
+      </ScrollView>
     </View>
   );
 }
@@ -302,6 +313,12 @@ const styles = StyleSheet.create({
   content: {
     padding: 16,
     gap: 12,
+  },
+  scrollContainer: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingBottom: 32,
   },
   card: {
     marginBottom: 0,
