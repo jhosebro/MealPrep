@@ -1,6 +1,6 @@
-import { Platform } from "react-native";
 import { supabase } from "@/services/supabase";
 import { useAuthStore } from "@/stores/authStore";
+import { Platform } from "react-native";
 
 const WEB_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID ?? "";
 
@@ -19,10 +19,15 @@ async function signInWithGoogleWeb(): Promise<{
   error?: string;
 }> {
   try {
+    // Use explicit SITE_URL env var in production; fall back to current origin in dev.
+    // Make sure this URL is whitelisted in Supabase → Authentication → Redirect URLs.
+    const redirectTo =
+      process.env.EXPO_PUBLIC_SITE_URL || window.location.origin;
+
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
-        redirectTo: window.location.origin,
+        redirectTo,
         queryParams: {
           prompt: "select_account",
         },
