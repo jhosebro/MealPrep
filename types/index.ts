@@ -16,6 +16,7 @@ export interface FridgeItem {
   status: Status;
   avg_days_per_unit: number | null;
   total_consumed: number;
+  archived: boolean;
   created_at: string;
 }
 

@@ -38,6 +38,7 @@ export default function EditItemScreen() {
   const [storeName, setStoreName] = useState("");
   const [showCustomStore, setShowCustomStore] = useState(false);
   const [status, setStatus] = useState<Status>("available");
+  const [archived, setArchived] = useState(false);
 
   useEffect(() => {
     if (id) {
@@ -72,6 +73,7 @@ export default function EditItemScreen() {
       setExpiryDate(parseDate(item.expiry_date));
 
       setStatus(item.status || "available");
+      setArchived(item.archived ?? false);
 
       const savedStore = item.store_name || "";
       if (savedStore && !STORES.includes(savedStore as any)) {
@@ -130,6 +132,7 @@ export default function EditItemScreen() {
         status: finalStatus,
         avg_days_per_unit: avgDays,
         total_consumed: totalConsumed,
+        archived,
       });
       router.back();
     } catch {
@@ -252,6 +255,26 @@ export default function EditItemScreen() {
               />
             ))}
           </View>
+        </View>
+
+        <View style={styles.field}>
+          <Text style={[styles.label, { color: colors.text }]}>Presupuesto</Text>
+          <View style={styles.categoryGrid}>
+            <ClayChip
+              label="Incluir"
+              active={!archived}
+              onPress={() => setArchived(false)}
+            />
+            <ClayChip
+              label="Archivar"
+              active={archived}
+              onPress={() => setArchived(true)}
+            />
+          </View>
+          <Text style={[styles.helper, { color: colors.textSecondary }]}>
+            Las comidas archivadas no aparecen en la lista de compras ni se
+            incluyen en el presupuesto.
+          </Text>
         </View>
 
         <View style={styles.field}>
@@ -393,5 +416,9 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     flexWrap: "wrap",
     gap: 8,
+  },
+  helper: {
+    fontSize: 13,
+    marginTop: 8,
   },
 });

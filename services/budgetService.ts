@@ -127,11 +127,16 @@ export const budgetService = {
   },
 
   async complete(sessionId: string): Promise<void> {
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from('budget_sessions')
       .update({ status: 'completed', completed_at: new Date().toISOString() })
-      .eq('id', sessionId);
+      .eq('id', sessionId)
+      .select('id')
+      .maybeSingle();
 
     if (error) throw error;
+    if (!data) {
+      throw new Error('No se pudo finalizar el presupuesto. Intenta de nuevo.');
+    }
   },
 };

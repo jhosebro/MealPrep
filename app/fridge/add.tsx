@@ -75,6 +75,7 @@ export default function AddItemScreen() {
         status: finalStatus,
         avg_days_per_unit: null,
         total_consumed: 0,
+        archived: false,
       });
       router.push("/(tabs)/fridge");
     } catch (e) {

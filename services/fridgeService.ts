@@ -13,6 +13,7 @@ interface CreateFridgeItem {
   status?: Status;
   avg_days_per_unit?: number | null;
   total_consumed?: number;
+  archived?: boolean;
 }
 
 interface UpdateFridgeItem extends Partial<CreateFridgeItem> {}
@@ -45,6 +46,7 @@ export const fridgeService = {
         status: item.status ?? 'available',
         avg_days_per_unit: item.avg_days_per_unit ?? null,
         total_consumed: item.total_consumed ?? 0,
+        archived: item.archived ?? false,
       })
       .select()
       .single();

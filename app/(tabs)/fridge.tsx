@@ -139,6 +139,7 @@ export default function FridgeScreen() {
         </Text>
         <Text style={[styles.itemDetails, { color: colors.textSecondary }]}>
           {item.quantity} {item.unit}
+          {item.archived ? " · Archivado" : ""}
         </Text>
         {item.avg_days_per_unit != null && item.status !== "empty" && (
           <Text style={[styles.itemEstimate, { color: colors.textSecondary }]}>

@@ -62,6 +62,10 @@ export default function ShoppingScreen() {
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
   const [savingPrice, setSavingPrice] = useState(false);
   const [flashItemId, setFlashItemId] = useState<string | null>(null);
+  const [showFinishModal, setShowFinishModal] = useState(false);
+  const [finishing, setFinishing] = useState(false);
+  const [finishError, setFinishError] = useState<string | null>(null);
+  const [showArchived, setShowArchived] = useState(false);
   const flashAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -99,7 +103,14 @@ export default function ShoppingScreen() {
   };
 
   const shoppingItems = useMemo(() => {
-    return items.filter((i) => i.status === "low" || i.status === "empty");
+    return items.filter(
+      (i) =>
+        !i.archived && (i.status === "low" || i.status === "empty"),
+    );
+  }, [items]);
+
+  const archivedItems = useMemo(() => {
+    return items.filter((i) => i.archived);
   }, [items]);
 
   const purchasedItems = useMemo(() => {
@@ -130,12 +141,14 @@ export default function ShoppingScreen() {
     });
   }, [shoppingItems, selectedCat, selectedStore]);
 
+  const listItems = showArchived ? archivedItems : filteredItems;
+
   const sections = useMemo(() => {
     return CATEGORIES.map((cat) => ({
       title: cat,
-      data: filteredItems.filter((i) => i.category === cat),
+      data: listItems.filter((i) => i.category === cat),
     })).filter((s) => s.data.length > 0);
-  }, [filteredItems]);
+  }, [listItems]);
 
   const total = useMemo(() => {
     return computeShoppingTotal(filteredItems);
@@ -211,23 +224,32 @@ export default function ShoppingScreen() {
 
   const handleFinish = () => {
     if (!session) return;
-    Alert.alert(
-      "Finalizar compra",
-      `Gastado: $${session.spent.toLocaleString()} de $${session.amount.toLocaleString()}\n¿Estás seguro de finalizar?`,
-      [
-        { text: "Cancelar", style: "cancel" },
-        {
-          text: "Finalizar",
-          onPress: async () => {
-            try {
-              await finishShopping(session.id);
-            } catch (e) {
-              Alert.alert("Error", (e as Error).message);
-            }
-          },
-        },
-      ],
-    );
+    setFinishError(null);
+    setShowFinishModal(true);
+  };
+
+  const handleFinishConfirm = async () => {
+    if (!session) return;
+    setFinishing(true);
+    setFinishError(null);
+    try {
+      await finishShopping(session.id);
+      setShowFinishModal(false);
+    } catch (e) {
+      setFinishError((e as Error).message);
+    } finally {
+      setFinishing(false);
+    }
+  };
+
+  const handleArchive = async (item: FridgeItem, archived: boolean) => {
+    if (!user) return;
+    try {
+      await updateItem(item.id, { archived });
+      if (editingItemId === item.id) setEditingItemId(null);
+    } catch (e) {
+      Alert.alert("Error", (e as Error).message);
+    }
   };
 
   const handlePriceConfirm = async (itemId: string, newPrice: number | null) => {
@@ -309,15 +331,54 @@ export default function ShoppingScreen() {
           <Text
             style={[styles.statusLabel, { color: statusColor[item.status] }]}
           >
-            {statusLabel[item.status]}
+            {item.archived
+              ? "Archivado · no se presupuesta"
+              : statusLabel[item.status]}
           </Text>
         </View>
-        <View
-          style={[styles.buyButton, neuSurface(scheme, 'raised'), { backgroundColor: colors.primary }]}
-        >
-          <TouchableOpacity onPress={() => handleMarkBought(item)}>
-            <Text style={styles.buyButtonText}>Comprado</Text>
-          </TouchableOpacity>
+        <View style={styles.actionColumn}>
+          {item.archived ? (
+            <View
+              style={[
+                styles.buyButton,
+                neuSurface(scheme, "raised"),
+                { backgroundColor: colors.primary, marginLeft: 0 },
+              ]}
+            >
+              <TouchableOpacity onPress={() => handleArchive(item, false)}>
+                <Text style={styles.buyButtonText}>Restaurar</Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <>
+              <View
+                style={[
+                  styles.buyButton,
+                  neuSurface(scheme, "raised"),
+                  { backgroundColor: colors.primary, marginLeft: 0 },
+                ]}
+              >
+                <TouchableOpacity onPress={() => handleMarkBought(item)}>
+                  <Text style={styles.buyButtonText}>Comprado</Text>
+                </TouchableOpacity>
+              </View>
+              <TouchableOpacity
+                style={styles.archiveButton}
+                onPress={() => handleArchive(item, true)}
+                accessibilityRole="button"
+                accessibilityLabel={`Archivar ${item.name}`}
+              >
+                <Text
+                  style={[
+                    styles.archiveButtonText,
+                    { color: colors.textSecondary },
+                  ]}
+                >
+                  Archivar
+                </Text>
+              </TouchableOpacity>
+            </>
+          )}
         </View>
       </Animated.View>
     );
@@ -326,8 +387,15 @@ export default function ShoppingScreen() {
   const renderEmpty = () => (
     <View style={styles.emptyContainer}>
       <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
-        No hay items pendientes 🎉
+        {showArchived
+          ? "No tienes comidas archivadas"
+          : "No hay items pendientes 🎉"}
       </Text>
+      {showArchived && (
+        <Text style={[styles.emptySubtext, { color: colors.textSecondary }]}>
+          Archiva comidas para que no se incluyan en el presupuesto
+        </Text>
+      )}
     </View>
   );
 
@@ -339,11 +407,23 @@ export default function ShoppingScreen() {
     <>
       <View style={styles.header}>
         <Text style={[styles.title, { color: colors.text }]}>
-          Lista de Compras
+          {showArchived ? "Comidas archivadas" : "Lista de Compras"}
         </Text>
+        {(archivedItems.length > 0 || showArchived) && (
+          <TouchableOpacity
+            style={[styles.archiveToggle, neuSurface(scheme, "raised")]}
+            onPress={() => setShowArchived((v) => !v)}
+          >
+            <Text style={[styles.archiveToggleText, { color: colors.text }]}>
+              {showArchived
+                ? "← Volver a la lista"
+                : `📦 Archivados (${archivedItems.length})`}
+            </Text>
+          </TouchableOpacity>
+        )}
       </View>
 
-      {shoppingItems.length > 0 && (
+      {!showArchived && shoppingItems.length > 0 && (
         <>
           <ScrollView
             horizontal
@@ -457,7 +537,7 @@ export default function ShoppingScreen() {
         </>
       )}
 
-      {!session && shoppingItems.length > 0 && (
+      {!showArchived && !session && shoppingItems.length > 0 && (
         <TouchableOpacity
           style={[styles.startBudgetBtn, neuSurface(scheme, 'raised')]}
           onPress={() => setShowBudgetModal(true)}
@@ -468,7 +548,7 @@ export default function ShoppingScreen() {
         </TouchableOpacity>
       )}
 
-      {shoppingItems.length > 0 && sections.length === 0 && (
+      {!showArchived && shoppingItems.length > 0 && sections.length === 0 && (
         <View style={styles.emptyCategory}>
           <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
             No hay items con esos filtros
@@ -480,7 +560,7 @@ export default function ShoppingScreen() {
 
   const footerComponent = (
     <>
-      {filteredItems.length > 0 && (
+      {!showArchived && filteredItems.length > 0 && (
         <View style={[styles.totalBar, neuSurface(scheme, 'flat')]}>
           <Text style={[styles.totalLabel, { color: colors.text }]}>
             Total aproximado
@@ -491,7 +571,7 @@ export default function ShoppingScreen() {
         </View>
       )}
 
-      {purchasedItems.length > 0 && (
+      {!showArchived && purchasedItems.length > 0 && (
         <View style={styles.undoSection}>
           <Text style={[styles.undoTitle, { color: colors.text }]}>
             Comprados en esta sesión
@@ -585,10 +665,20 @@ export default function ShoppingScreen() {
           </View>
         )}
         ListHeaderComponent={
-          shoppingItems.length > 0 ? headerComponent : null
+          shoppingItems.length > 0 ||
+          archivedItems.length > 0 ||
+          showArchived
+            ? headerComponent
+            : null
         }
         ListEmptyComponent={
-          shoppingItems.length === 0 ? renderEmpty : undefined
+          showArchived
+            ? archivedItems.length === 0
+              ? renderEmpty
+              : undefined
+            : shoppingItems.length === 0
+              ? renderEmpty
+              : undefined
         }
         ListFooterComponent={footerComponent}
         contentContainerStyle={styles.list}
@@ -663,6 +753,65 @@ export default function ShoppingScreen() {
           </View>
         </View>
       </Modal>
+
+      <Modal
+        visible={showFinishModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => {
+          if (!finishing) setShowFinishModal(false);
+        }}
+      >
+        <View style={[styles.modalOverlay, { backgroundColor: colors.overlay }]}>
+          <View
+            style={[
+              styles.modalContent,
+              { backgroundColor: colors.background },
+            ]}
+          >
+            <Text style={[styles.modalTitle, { color: colors.text }]}>
+              Finalizar compra
+            </Text>
+            <Text style={[styles.finishDetail, { color: colors.textSecondary }]}>
+              {session
+                ? `Gastado: $${session.spent.toLocaleString()} de $${session.amount.toLocaleString()}`
+                : ""}
+            </Text>
+            <Text style={[styles.finishDetail, { color: colors.textSecondary }]}>
+              ¿Estás seguro de finalizar este presupuesto?
+            </Text>
+            {finishError && (
+              <Text style={[styles.finishError, { color: colors.danger }]}>
+                {finishError}
+              </Text>
+            )}
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={[styles.modalBtn, neuSurface(scheme, "raised")]}
+                onPress={() => setShowFinishModal(false)}
+                disabled={finishing}
+              >
+                <Text style={[styles.modalBtnText, { color: colors.text }]}>
+                  Cancelar
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.modalBtn,
+                  neuSurface(scheme, "raised"),
+                  { backgroundColor: colors.primary },
+                ]}
+                onPress={handleFinishConfirm}
+                disabled={finishing}
+              >
+                <Text style={[styles.modalBtnText, { color: "#fff" }]}>
+                  {finishing ? "Finalizando..." : "Finalizar"}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -679,6 +828,17 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: "bold",
+  },
+  archiveToggle: {
+    alignSelf: "flex-start",
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
+    marginTop: 10,
+  },
+  archiveToggleText: {
+    fontSize: 14,
+    fontWeight: "600",
   },
   list: {
     paddingBottom: 100,
@@ -814,6 +974,11 @@ const styles = StyleSheet.create({
     marginTop: 2,
     fontWeight: "500",
   },
+  actionColumn: {
+    alignItems: "center",
+    marginLeft: 12,
+    gap: 6,
+  },
   buyButton: {
     paddingHorizontal: 16,
     paddingVertical: 10,
@@ -824,6 +989,15 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: 14,
     fontWeight: "600",
+  },
+  archiveButton: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+  },
+  archiveButtonText: {
+    fontSize: 12,
+    fontWeight: "600",
+    textDecorationLine: "underline",
   },
 
   // Undo
@@ -888,6 +1062,13 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: 18,
     fontWeight: "600",
+    textAlign: "center",
+  },
+  emptySubtext: {
+    fontSize: 14,
+    marginTop: 8,
+    paddingHorizontal: 32,
+    textAlign: "center",
   },
 
   // Modal
@@ -927,5 +1108,15 @@ const styles = StyleSheet.create({
   modalBtnText: {
     fontSize: 16,
     fontWeight: "600",
+  },
+  finishDetail: {
+    fontSize: 15,
+    lineHeight: 22,
+    marginBottom: 4,
+  },
+  finishError: {
+    fontSize: 14,
+    fontWeight: "600",
+    marginTop: 12,
   },
 });
