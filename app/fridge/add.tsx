@@ -1,15 +1,16 @@
 import { ClayButton, ClayChip } from "@/components/clay";
 import { DateField } from "@/components/date-field";
+import { lineTotal, PriceField, PriceMode } from "@/components/price-field";
 import { Colors } from "@/constants/theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useAuthStore } from "@/stores/authStore";
 import { useFridgeStore } from "@/stores/fridgeStore";
 import { neuInset } from "@/lib/neumorphic";
 import { CATEGORIES, Status, STORES, UNITS } from "@/types";
-import { useRouter } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { useState } from "react";
 import {
-    Alert,
     ScrollView,
     StyleSheet,
     Text,
@@ -17,7 +18,7 @@ import {
     TouchableOpacity,
     View,
 } from "react-native";
-import CurrencyInput from "react-native-currency-input";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function AddItemScreen() {
   const router = useRouter();
@@ -27,12 +28,18 @@ export default function AddItemScreen() {
   const { user } = useAuthStore();
   const { addItem, loading } = useFridgeStore();
 
-  const [name, setName] = useState("");
+  // Prellenado desde el escáner (app/fridge/scan.tsx)
+  const scanned = useLocalSearchParams<{ name?: string; category?: string; note?: string }>();
+  const [name, setName] = useState(scanned.name ?? "");
   const [quantity, setQuantity] = useState("1");
   const [unit, setUnit] = useState("und");
-  const [category, setCategory] = useState("otros");
+  const [category, setCategory] = useState(
+    CATEGORIES.includes(scanned.category as any) ? scanned.category! : "otros",
+  );
   const [price, setPrice] = useState("");
-  const [purchaseDate, setPurchaseDate] = useState<Date | null>(null);
+  const [priceMode, setPriceMode] = useState<PriceMode>("total");
+  const [error, setError] = useState("");
+  const [purchaseDate, setPurchaseDate] = useState<Date | null>(new Date());
   const [expiryDate, setExpiryDate] = useState<Date | null>(null);
   const [storeName, setStoreName] = useState("");
   const [showCustomStore, setShowCustomStore] = useState(false);
@@ -46,18 +53,17 @@ export default function AddItemScreen() {
     return `${year}-${month}-${day}`;
   };
 
+  const qty = Number(quantity);
+  const qtyValid = quantity.trim() !== "" && Number.isInteger(qty) && qty >= 0;
+  // price en BD es el total de la línea (lo suma computeShoppingTotal)
+  const totalPrice = lineTotal(price, priceMode, qtyValid ? qty : null);
+
   const handleSave = async () => {
-    if (!name.trim()) {
-      Alert.alert("Error", "El nombre es requerido");
-      return;
-    }
+    setError("");
+    if (!name.trim()) return setError("El nombre es requerido");
+    if (!user) return setError("Debes iniciar sesión");
+    if (!qtyValid) return setError("La cantidad debe ser un número entero (0 o más)");
 
-    if (!user) {
-      Alert.alert("Error", "Debes iniciar sesión");
-      return;
-    }
-
-    const qty = parseInt(quantity) || 1;
     const finalStatus = qty === 0 ? "empty" : status;
 
     try {
@@ -66,7 +72,7 @@ export default function AddItemScreen() {
         quantity: qty,
         unit,
         category,
-        price: price ? parseFloat(price) : null,
+        price: totalPrice,
         purchase_date: formatDate(purchaseDate) || null,
         store_name: showCustomStore
           ? storeName.trim() || null
@@ -79,13 +85,13 @@ export default function AddItemScreen() {
       });
       router.push("/(tabs)/fridge");
     } catch (e) {
-      Alert.alert("Error", "No se pudo agregar el item");
+      setError("No se pudo agregar el alimento. Intenta de nuevo.");
       console.error("Add item error:", e);
     }
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()}>
           <Text style={[styles.backButton, { color: colors.tint }]}>
@@ -95,7 +101,14 @@ export default function AddItemScreen() {
         <Text style={[styles.title, { color: colors.text }]}>
           Agregar alimento
         </Text>
-        <View style={{ width: 60 }} />
+        <TouchableOpacity
+          onPress={() => router.replace("/fridge/scan")}
+          accessibilityRole="button"
+          accessibilityLabel="Escanear código de barras"
+          style={styles.scanButton}
+        >
+          <Ionicons name="barcode-outline" size={26} color={colors.primary} />
+        </TouchableOpacity>
       </View>
 
       <ScrollView
@@ -111,6 +124,11 @@ export default function AddItemScreen() {
             placeholder="Ej: Huevos, Leche, Tomate..."
             placeholderTextColor={colors.textSecondary}
           />
+          {scanned.note ? (
+            <Text style={[styles.hint, { color: colors.textSecondary }]}>
+              Escaneado · empaque de {scanned.note}
+            </Text>
+          ) : null}
         </View>
 
         <View style={styles.row}>
@@ -180,14 +198,14 @@ export default function AddItemScreen() {
 
         <View style={styles.field}>
           <Text style={[styles.label, { color: colors.text }]}>Valor</Text>
-          <CurrencyInput
-            value={parseFloat(price)}
-            onChangeValue={(parse) => setPrice(parse ? parse.toString() : "")}
-            prefix="$ "
-            delimiter="."
-            separator=","
-            precision={0}
-            style={[styles.input, neuInset(scheme), { color: colors.text }]}
+          <PriceField
+            price={price}
+            onChangePrice={setPrice}
+            mode={priceMode}
+            onChangeMode={setPriceMode}
+            qty={qtyValid ? qty : null}
+            unit={unit}
+            scheme={scheme}
           />
         </View>
 
@@ -253,6 +271,12 @@ export default function AddItemScreen() {
           )}
         </View>
 
+        {error ? (
+          <Text accessibilityRole="alert" style={[styles.hint, { color: colors.danger }]}>
+            {error}
+          </Text>
+        ) : null}
+
         <ClayButton
           onPress={handleSave}
           disabled={loading}
@@ -262,7 +286,7 @@ export default function AddItemScreen() {
           {loading ? "Guardando..." : "Guardar"}
         </ClayButton>
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -275,8 +299,12 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     paddingHorizontal: 16,
-    paddingTop: 60,
+    paddingTop: 8,
     paddingBottom: 16,
+  },
+  scanButton: {
+    width: 60,
+    alignItems: "flex-end",
   },
   backButton: {
     fontSize: 18,
@@ -307,6 +335,10 @@ const styles = StyleSheet.create({
   },
   row: {
     flexDirection: "row",
+  },
+  hint: {
+    fontSize: 14,
+    marginTop: 8,
   },
   unitChip: {
     width: 65,
