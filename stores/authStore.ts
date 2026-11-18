@@ -2,7 +2,7 @@ import { supabase } from "@/services/supabase";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { create } from "zustand";
 
-const SESSION_KEY = "app_session";
+const SESSION_KEY = "app_session"; // legado: ya no se escribe
 
 interface AuthState {
   user: { id: string; email?: string } | null;
@@ -31,9 +31,6 @@ export const useAuthStore = create<AuthState>((set) => ({
       set({ loading: false });
       return { error };
     }
-    if (data.session) {
-      await AsyncStorage.setItem(SESSION_KEY, JSON.stringify(data.session));
-    }
     set({ user: data.user, loading: false, initialized: true });
     return { error: null };
   },
@@ -50,7 +47,6 @@ export const useAuthStore = create<AuthState>((set) => ({
       set({ loading: false });
       return { error: null, needsConfirmation: true };
     }
-    await AsyncStorage.setItem(SESSION_KEY, JSON.stringify(data.session));
     set({ user: data.user, loading: false, initialized: true });
     return { error: null };
   },
@@ -59,6 +55,8 @@ export const useAuthStore = create<AuthState>((set) => ({
     const TIMEOUT_MS = 10000;
 
     const restore = async () => {
+      // Purga la copia legada en texto plano; Supabase ya persiste la sesión en almacenamiento seguro.
+      await AsyncStorage.removeItem(SESSION_KEY);
       const {
         data: { session },
       } = await supabase.auth.getSession();
@@ -69,25 +67,6 @@ export const useAuthStore = create<AuthState>((set) => ({
           initialized: true,
         });
         return;
-      }
-
-      const stored = await AsyncStorage.getItem(SESSION_KEY);
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        const { data } = await supabase.auth.setSession({
-          access_token: parsed.access_token,
-          refresh_token: parsed.refresh_token,
-        });
-        if (data.session) {
-          await AsyncStorage.setItem(SESSION_KEY, JSON.stringify(data.session));
-        }
-        if (data.user) {
-          set({
-            user: { id: data.user.id, email: data.user.email },
-            initialized: true,
-          });
-          return;
-        }
       }
 
       set({ user: null, initialized: true });

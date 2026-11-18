@@ -8,7 +8,7 @@ import { Colors } from "@/constants/theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 
 export default function Index() {
-  const { user, initialize } = useAuthStore();
+  const { user, initialize, signOut } = useAuthStore();
   const router = useRouter();
   const colors = Colors[useColorScheme() === "dark" ? "dark" : "light"];
   const [ready, setReady] = useState(false);
@@ -73,7 +73,14 @@ export default function Index() {
             Intentar de nuevo
           </Text>
         </TouchableOpacity>
-        <TouchableOpacity accessibilityRole="button" onPress={() => router.replace("/login" as any)}>
+        <TouchableOpacity
+          accessibilityRole="button"
+          // Cerrar sesión antes de ir al login: si no, la sesión activa saltaría el bloqueo biométrico.
+          onPress={async () => {
+            await signOut();
+            router.replace("/login" as any);
+          }}
+        >
           <Text style={{ color: colors.primary, fontSize: 16 }}>
             Usar contraseña
           </Text>

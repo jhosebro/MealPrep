@@ -58,7 +58,6 @@ async function signInWithGoogleNative(): Promise<{
 
     GoogleSignin.configure({
       webClientId: WEB_CLIENT_ID,
-      offlineAccess: true,
     });
 
     await GoogleSignin.hasPlayServices();
