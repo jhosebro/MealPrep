@@ -1,7 +1,10 @@
+import { showConfirm } from '@/lib/confirm';
 import { ClayButton } from '@/components/clay';
-import { Colors } from '@/constants/theme';
+import { Colors, MealTypeColors, MealTypeDefault } from '@/constants/theme';
+import { Ionicons } from '@expo/vector-icons';
+
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import { neuShadow, neuSurface } from '@/lib/neumorphic';
+import { neuSurface } from '@/lib/neumorphic';
 import { useAuthStore } from '@/stores/authStore';
 import { useRecipesStore } from '@/stores/recipesStore';
 import { useRouter } from 'expo-router';
@@ -13,24 +16,6 @@ const showAlert = (title: string, message: string) => {
   } else {
     const { Alert } = require('react-native');
     Alert.alert(title, message);
-  }
-};
-
-const showConfirm = (
-  title: string,
-  message: string,
-  onConfirm: () => void,
-  confirmText = 'Confirmar',
-) => {
-  if (Platform.OS === 'web') {
-    const confirmed = window.confirm(`${title}\n${message}`);
-    if (confirmed) onConfirm();
-  } else {
-    const { Alert } = require('react-native');
-    Alert.alert(title, message, [
-      { text: 'Cancelar', style: 'cancel' },
-      { text: confirmText, onPress: onConfirm },
-    ]);
   }
 };
 
@@ -69,7 +54,7 @@ export default function RecipeDetailScreen() {
       'Se marcará como preparada y no se sugerirá en los próximos 7 días.',
       async () => {
         await markAsCooked(selectedRecipeSavedId);
-        showAlert('Listo', '¡Buen provecho! 🍽');
+        showAlert('Listo', '¡Buen provecho!');
       },
       'Sí, la preparé',
     );
@@ -98,16 +83,7 @@ export default function RecipeDetailScreen() {
 
   const isSaved = selectedRecipeSavedId !== null;
 
-  const getMealTypeColor = (type: string) => {
-    switch (type) {
-      case 'desayuno': return '#FFB347';
-      case 'almuerzo': return '#77DD77';
-      case 'cena': return '#CB99C9';
-      case 'merienda': return '#87CEEB';
-      case 'snack': return '#F0E68C';
-      default: return '#999';
-    }
-  };
+  const getMealTypeColor = (type: string) => MealTypeColors[type] ?? MealTypeDefault;
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -132,23 +108,23 @@ export default function RecipeDetailScreen() {
 
         <View style={styles.metaRow}>
           {selectedRecipe.servings && (
-            <View style={[styles.metaChip, neuSurface(scheme, 'raised'), { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16 }]}>
+            <View style={[styles.metaChip, { backgroundColor: colors.surfacePressed, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 9999 }]}>
               <Text style={[styles.metaChipText, { color: colors.textSecondary }]}>
-                🍽 {selectedRecipe.servings} {selectedRecipe.servings === 1 ? 'porción' : 'porciones'}
+                <Ionicons name="people-outline" size={14} />{' '}{selectedRecipe.servings} {selectedRecipe.servings === 1 ? 'porción' : 'porciones'}
               </Text>
             </View>
           )}
           {selectedRecipe.prep_time_minutes && (
-            <View style={[styles.metaChip, neuSurface(scheme, 'raised'), { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16 }]}>
+            <View style={[styles.metaChip, { backgroundColor: colors.surfacePressed, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 9999 }]}>
               <Text style={[styles.metaChipText, { color: colors.textSecondary }]}>
-                ⏱ {selectedRecipe.prep_time_minutes} min
+                <Ionicons name="time-outline" size={14} />{' '}{selectedRecipe.prep_time_minutes} min
               </Text>
             </View>
           )}
           {selectedRecipe.difficulty && (
-            <View style={[styles.metaChip, neuSurface(scheme, 'raised'), { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16 }]}>
+            <View style={[styles.metaChip, { backgroundColor: colors.surfacePressed, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 9999 }]}>
               <Text style={[styles.metaChipText, { color: colors.textSecondary }]}>
-                📊 {selectedRecipe.difficulty}
+                <Ionicons name="bar-chart-outline" size={14} />{' '}{selectedRecipe.difficulty}
               </Text>
             </View>
           )}
@@ -178,7 +154,7 @@ export default function RecipeDetailScreen() {
           <Text style={[styles.sectionTitle, { color: colors.text }]}>Pasos</Text>
           {selectedRecipe.steps.map((step, index) => (
             <View key={index} style={styles.stepRow}>
-              <View style={[styles.stepNumber, { backgroundColor: colors.tint }, neuShadow(scheme, 'raised')]}>
+              <View style={[styles.stepNumber, { backgroundColor: colors.primary }]}>
                 <Text style={styles.stepNumberText}>{index + 1}</Text>
               </View>
               <Text style={[styles.stepText, { color: colors.textSecondary }]}>{step}</Text>
@@ -199,21 +175,19 @@ export default function RecipeDetailScreen() {
           {isSaved && lastCookedAt && (
             <View style={[styles.cookedInfoBanner, neuSurface(scheme, 'flat'), { alignItems: 'center' }]}>
               <Text style={[styles.cookedInfoText, { color: colors.text }]}>
-                ✅ Última preparación: {formatDate(lastCookedAt)}
+                <Ionicons name="checkmark-circle" size={16} color={colors.success} />{' '}Última preparación: {formatDate(lastCookedAt)}
               </Text>
             </View>
           )}
 
           {isSaved && (
-            <View style={[neuSurface(scheme, 'raised'), { backgroundColor: lastCookedAt ? '#8BC34A' : '#FF9800', borderRadius: 12 }]}>
-              <ClayButton
-                variant="secondary"
-                onPress={handleMarkCooked}
-                disabled={loading}
-              >
-                {lastCookedAt ? '🍳 Preparar de nuevo' : '🍳 Ya la preparé'}
-              </ClayButton>
-            </View>
+            <ClayButton
+              variant={lastCookedAt ? 'secondary' : 'primary'}
+              onPress={handleMarkCooked}
+              disabled={loading}
+            >
+              {lastCookedAt ? 'Preparar de nuevo' : 'Ya la preparé'}
+            </ClayButton>
           )}
 
           {!isSaved && (

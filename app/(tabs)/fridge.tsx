@@ -1,5 +1,7 @@
 import { Colors } from "@/constants/theme";
+import { Ionicons } from "@expo/vector-icons";
 import { ClayChip } from "@/components/clay";
+import { showConfirm } from "@/lib/confirm";
 import { neuInset, neuSurface } from "@/lib/neumorphic";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useAuthStore } from "@/stores/authStore";
@@ -89,10 +91,7 @@ export default function FridgeScreen() {
   };
 
   const handleDelete = (id: string, name: string) => {
-    Alert.alert("Eliminar item", `¿Estás seguro de eliminar "${name}"?`, [
-      { text: "Cancelar", style: "cancel" },
-      { text: "Eliminar", style: "destructive", onPress: () => deleteItem(id) },
-    ]);
+    showConfirm("Eliminar alimento", `¿Estás seguro de eliminar "${name}"?`, () => deleteItem(id), "Eliminar");
   };
 
   const handleExportJSON = async () => {
@@ -154,7 +153,7 @@ export default function FridgeScreen() {
   const renderEmpty = () => (
     <View style={styles.emptyContainer}>
       <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
-        Tu fridge está vacío
+        Tu nevera está vacía
       </Text>
       <Text style={[styles.emptySubtext, { color: colors.textSecondary }]}>
         Toca + para agregar ingredientes
@@ -169,7 +168,7 @@ export default function FridgeScreen() {
         <View style={styles.headerActions}>
           <View style={[styles.exportButton, neuSurface(scheme, "raised")]}>
             <TouchableOpacity onPress={handleExportJSON}>
-              <Text style={[styles.exportButtonText, { color: colors.primaryDark }]}>↗ Exportar</Text>
+              <Text style={[styles.exportButtonText, { color: colors.primaryDark }]}><Ionicons name="share-outline" size={16} />{" "}Exportar</Text>
             </TouchableOpacity>
           </View>
           <View
@@ -182,6 +181,8 @@ export default function FridgeScreen() {
             <TouchableOpacity
               style={styles.addButtonTouchable}
               onPress={() => router.push("/fridge/add" as any)}
+              accessibilityRole="button"
+              accessibilityLabel="Agregar ingrediente"
             >
               <Text style={styles.addButtonText}>+</Text>
             </TouchableOpacity>
@@ -204,7 +205,7 @@ export default function FridgeScreen() {
             style={styles.clearButton}
             onPress={() => setSearchQuery("")}
           >
-            <Text style={[styles.clearButtonText, { color: colors.textSecondary }]}>✕</Text>
+            <Ionicons name="close-circle" size={18} color={colors.textSecondary} />
           </TouchableOpacity>
         )}
       </View>
@@ -264,7 +265,7 @@ export default function FridgeScreen() {
             </Text>
           </View>
         )}
-        ListHeaderComponent={items.length > 0 ? headerComponent : null}
+        ListHeaderComponent={headerComponent}
         ListEmptyComponent={items.length === 0 ? renderEmpty : undefined}
         contentContainerStyle={styles.list}
         refreshControl={
@@ -285,7 +286,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     paddingHorizontal: 16,
-    paddingTop: 8,
+    paddingTop: 24,
     paddingBottom: 16,
   },
   title: {

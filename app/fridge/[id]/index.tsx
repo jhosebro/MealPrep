@@ -1,5 +1,7 @@
 import { ClayButton, ClayChip } from "@/components/clay";
+import { showConfirm } from "@/lib/confirm";
 import { DateField } from "@/components/date-field";
+import { lineTotal, PriceField, PriceMode } from "@/components/price-field";
 import { Colors } from "@/constants/theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { neuInset } from "@/lib/neumorphic";
@@ -9,7 +11,6 @@ import { CATEGORIES, FridgeItem, Status, STORES, UNITS } from "@/types";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import {
-  Alert,
   ScrollView,
   StyleSheet,
   Text,
@@ -17,7 +18,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import CurrencyInput from "react-native-currency-input";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function EditItemScreen() {
   const router = useRouter();
@@ -39,6 +40,8 @@ export default function EditItemScreen() {
   const [showCustomStore, setShowCustomStore] = useState(false);
   const [status, setStatus] = useState<Status>("available");
   const [archived, setArchived] = useState(false);
+  const [priceMode, setPriceMode] = useState<PriceMode>("total");
+  const [error, setError] = useState("");
 
   useEffect(() => {
     if (id) {
@@ -68,7 +71,16 @@ export default function EditItemScreen() {
       setQuantity(item.quantity.toString());
       setUnit(item.unit);
       setCategory(item.category);
-      setPrice(item.price?.toString() || "");
+      // Si el total se divide exacto por la cantidad, se edita por unidad:
+      // así al cambiar la cantidad el total se recalcula solo.
+      const perUnit = item.price != null && item.quantity > 0 ? item.price / item.quantity : null;
+      if (perUnit != null && Number.isInteger(perUnit)) {
+        setPriceMode("unit");
+        setPrice(perUnit.toString());
+      } else {
+        setPriceMode("total");
+        setPrice(item.price?.toString() || "");
+      }
       setPurchaseDate(parseDate(item.purchase_date));
       setExpiryDate(parseDate(item.expiry_date));
 
@@ -86,13 +98,13 @@ export default function EditItemScreen() {
     }
   }, [item]);
 
-  const handleSave = async () => {
-    if (!name.trim()) {
-      Alert.alert("Error", "El nombre es requerido");
-      return;
-    }
+  const qty = Number(quantity);
+  const qtyValid = quantity.trim() !== "" && Number.isInteger(qty) && qty >= 0;
 
-    const qty = parseInt(quantity) || 1;
+  const handleSave = async () => {
+    setError("");
+    if (!name.trim()) return setError("El nombre es requerido");
+    if (!qtyValid) return setError("La cantidad debe ser un número entero (0 o más)");
     const finalStatus = qty === 0 ? "empty" : status;
     const savedPurchaseDate = formatDate(purchaseDate) || null;
 
@@ -123,7 +135,7 @@ export default function EditItemScreen() {
         quantity: qty,
         unit,
         category,
-        price: price ? parseFloat(price) : null,
+        price: lineTotal(price, priceMode, qty),
         purchase_date: savedPurchaseDate,
         store_name: showCustomStore
           ? storeName.trim() || null
@@ -136,22 +148,15 @@ export default function EditItemScreen() {
       });
       router.back();
     } catch {
-      Alert.alert("Error", "No se pudo actualizar el item");
+      setError("No se pudo guardar. Intenta de nuevo.");
     }
   };
 
   const handleDelete = () => {
-    Alert.alert("Eliminar item", `¿Estás seguro de eliminar "${name}"?`, [
-      { text: "Cancelar", style: "cancel" },
-      {
-        text: "Eliminar",
-        style: "destructive",
-        onPress: async () => {
-          await deleteItem(id);
-          router.back();
-        },
-      },
-    ]);
+    showConfirm("Eliminar alimento", `¿Estás seguro de eliminar "${name}"?`, async () => {
+      await deleteItem(id);
+      router.back();
+    }, "Eliminar");
   };
 
   if (!item) {
@@ -163,7 +168,7 @@ export default function EditItemScreen() {
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()}>
           <Text style={[styles.backButton, { color: colors.tint }]}>
@@ -279,14 +284,14 @@ export default function EditItemScreen() {
 
         <View style={styles.field}>
           <Text style={[styles.label, { color: colors.text }]}>Valor</Text>
-          <CurrencyInput
-            value={parseFloat(price)}
-            onChangeValue={(parse) => setPrice(parse ? parse.toString() : "")}
-            prefix="$ "
-            delimiter="."
-            separator=","
-            precision={0}
-            style={[styles.input, neuInset(scheme), { color: colors.text }]}
+          <PriceField
+            price={price}
+            onChangePrice={setPrice}
+            mode={priceMode}
+            onChangeMode={setPriceMode}
+            qty={qtyValid ? qty : null}
+            unit={unit}
+            scheme={scheme}
           />
         </View>
 
@@ -352,6 +357,12 @@ export default function EditItemScreen() {
           )}
         </View>
 
+        {error ? (
+          <Text accessibilityRole="alert" style={{ color: colors.danger, fontSize: 14, marginBottom: 8 }}>
+            {error}
+          </Text>
+        ) : null}
+
         <ClayButton
           onPress={handleSave}
           disabled={loading}
@@ -361,7 +372,7 @@ export default function EditItemScreen() {
           {loading ? "Guardando..." : "Guardar cambios"}
         </ClayButton>
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -374,7 +385,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     paddingHorizontal: 16,
-    paddingTop: 60,
+    paddingTop: 8,
     paddingBottom: 16,
   },
   backButton: {
