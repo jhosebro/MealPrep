@@ -1,0 +1,14 @@
+# Cabeceras de seguridad (SOC 2 CC6.6/CC6.7, ISO 27001 A.8.23/A.8.26).
+[[headers]]
+  for = "/*"
+  [headers.values]
+    Strict-Transport-Security = "max-age=63072000; includeSubDomains; preload"
+    X-Content-Type-Options = "nosniff"
+    X-Frame-Options = "DENY"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    Permissions-Policy = "camera=(self), microphone=(), geolocation=(), payment=(), usb=()"
+    Cross-Origin-Opener-Policy = "same-origin-allow-popups"
+    # El hash es el del único script inline que genera expo-router (globalThis.__EXPO_ROUTER_HYDRATE__=true;).
+    # Si tras actualizar Expo la web queda en blanco, recalcúlalo desde dist/index.html.
+    # jsdelivr: zxing-wasm del escáner de códigos en web. style 'unsafe-inline': react-native-web inyecta estilos.
+    Content-Security-Policy = "default-src 'self'; script-src 'self' 'sha256-67fhrP0+BkBqmgGGXTtgiVO/9EQs3QruYNU/7fnRkI8=' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://world.openfoodfacts.org https://fastly.jsdelivr.net; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests"

@@ -4,7 +4,10 @@ import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { neuSurface } from '@/lib/neumorphic';
+import { showConfirm } from '@/lib/confirm';
+import { accountService } from '@/services/accountService';
 import { biometricService } from '@/services/biometricService';
+import * as Clipboard from 'expo-clipboard';
 import { useAuthStore } from '@/stores/authStore';
 import { useFridgeStore } from '@/stores/fridgeStore';
 import { useRecipesStore } from '@/stores/recipesStore';
@@ -87,6 +90,36 @@ export default function HomeScreen() {
     setBiometricEnabled(value);
   };
 
+  const notify = (title: string, msg: string) =>
+    Platform.OS === 'web' ? window.alert(`${title}\n${msg}`) : Alert.alert(title, msg);
+
+  const handleExportData = async () => {
+    try {
+      await Clipboard.setStringAsync(await accountService.exportMyData());
+      notify('Datos exportados', 'Copiamos todos tus datos (JSON) al portapapeles.');
+    } catch {
+      notify('Error', 'No se pudieron exportar tus datos. Inténtalo de nuevo.');
+    }
+  };
+
+  const handleDeleteAccount = () => {
+    showConfirm(
+      'Eliminar cuenta',
+      'Se borrarán tu cuenta y todos tus datos de forma permanente. Esta acción no se puede deshacer.',
+      async () => {
+        try {
+          await accountService.deleteMyAccount();
+          await biometricService.setEnabled(false);
+          await signOut();
+          router.replace('/login' as any);
+        } catch {
+          notify('Error', 'No se pudo eliminar la cuenta. Inténtalo de nuevo.');
+        }
+      },
+      'Eliminar',
+    );
+  };
+
   const handleSignOut = () => {
     const doSignOut = async () => {
       await signOut();
@@ -149,6 +182,22 @@ export default function HomeScreen() {
                 accessibilityLabel="Desbloqueo con huella"
               />
             </View>
+
+            <TouchableOpacity
+              style={[styles.signOutButton, neuSurface(scheme, 'raised'), { borderColor: colors.border }]}
+              onPress={handleExportData}
+              accessibilityRole="button"
+            >
+              <Text style={{ color: colors.text, fontSize: 16, fontWeight: '600' }}>Exportar mis datos</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.signOutButton, neuSurface(scheme, 'raised'), { borderColor: colors.danger }]}
+              onPress={handleDeleteAccount}
+              accessibilityRole="button"
+            >
+              <Text style={{ color: colors.danger, fontSize: 16, fontWeight: '600' }}>Eliminar mi cuenta</Text>
+            </TouchableOpacity>
 
             <TouchableOpacity
               style={[styles.signOutButton, neuSurface(scheme, 'raised'), { borderColor: colors.danger }]}
