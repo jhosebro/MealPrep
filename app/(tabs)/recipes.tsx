@@ -1,5 +1,7 @@
 import { ClayCard, ClayButton, ClayChip } from '@/components/clay';
-import { Colors } from '@/constants/theme';
+import { Colors, MealTypeColors, MealTypeDefault } from '@/constants/theme';
+import { Ionicons } from '@expo/vector-icons';
+
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { neuSurface, neuInset } from '@/lib/neumorphic';
 import { recipesService } from '@/services/recipesService';
@@ -161,16 +163,7 @@ export default function RecipesScreen() {
     router.push('/recipes/create' as any);
   };
 
-  const getMealTypeColor = (type: string) => {
-    switch (type) {
-      case 'desayuno': return '#FFB347';
-      case 'almuerzo': return '#77DD77';
-      case 'cena': return '#CB99C9';
-      case 'merienda': return '#87CEEB';
-      case 'snack': return '#F0E68C';
-      default: return '#999';
-    }
-  };
+  const getMealTypeColor = (type: string) => MealTypeColors[type] ?? MealTypeDefault;
 
   const getMealTypeLabel = (type: MealType) => {
     switch (type) {
@@ -229,7 +222,7 @@ export default function RecipesScreen() {
           <View style={[styles.matchBadge, { backgroundColor: item.missingIngredients.length === 0 ? colors.success : colors.warning }]}>
             <Text style={styles.matchBadgeText}>
               {item.missingIngredients.length === 0
-                ? '✓ Tienes todo'
+                ? 'Tienes todo'
                 : `${item.missingIngredients.length} faltante${item.missingIngredients.length > 1 ? 's' : ''}`}
             </Text>
           </View>
@@ -241,17 +234,17 @@ export default function RecipesScreen() {
         <View style={styles.recipeMetaRow}>
           {item.recipe.servings && (
             <Text style={[styles.recipeMeta, { color: colors.textSecondary }]}>
-              🍽 {item.recipe.servings} {item.recipe.servings === 1 ? 'porción' : 'porciones'}
+              <Ionicons name="people-outline" size={14} />{' '}{item.recipe.servings} {item.recipe.servings === 1 ? 'porción' : 'porciones'}
             </Text>
           )}
           {item.recipe.prep_time_minutes && (
             <Text style={[styles.recipeMeta, { color: colors.textSecondary }]}>
-              ⏱ {item.recipe.prep_time_minutes} min
+              <Ionicons name="time-outline" size={14} />{' '}{item.recipe.prep_time_minutes} min
             </Text>
           )}
           {item.recipe.difficulty && (
             <Text style={[styles.recipeMeta, { color: colors.textSecondary }]}>
-              📊 {item.recipe.difficulty}
+              <Ionicons name="bar-chart-outline" size={14} />{' '}{item.recipe.difficulty}
             </Text>
           )}
         </View>
@@ -282,23 +275,23 @@ export default function RecipesScreen() {
         <View style={styles.recipeMetaRow}>
           {item.recipe_data.servings && (
             <Text style={[styles.recipeMeta, { color: colors.textSecondary }]}>
-              🍽 {item.recipe_data.servings} {item.recipe_data.servings === 1 ? 'porción' : 'porciones'}
+              <Ionicons name="people-outline" size={14} />{' '}{item.recipe_data.servings} {item.recipe_data.servings === 1 ? 'porción' : 'porciones'}
             </Text>
           )}
           {item.recipe_data.prep_time_minutes && (
             <Text style={[styles.recipeMeta, { color: colors.textSecondary }]}>
-              ⏱ {item.recipe_data.prep_time_minutes} min
+              <Ionicons name="time-outline" size={14} />{' '}{item.recipe_data.prep_time_minutes} min
             </Text>
           )}
           {item.recipe_data.difficulty && (
             <Text style={[styles.recipeMeta, { color: colors.textSecondary }]}>
-              📊 {item.recipe_data.difficulty}
+              <Ionicons name="bar-chart-outline" size={14} />{' '}{item.recipe_data.difficulty}
             </Text>
           )}
         </View>
         {item.last_cooked_at && (
           <Text style={[styles.cookedLabel, { color: colors.textSecondary }]}>
-            ✅ Preparada recientemente
+            <Ionicons name="checkmark-circle-outline" size={14} />{' '}Preparada recientemente
           </Text>
         )}
       </ClayCard>
@@ -354,7 +347,7 @@ export default function RecipesScreen() {
           <ClayButton
             onPress={handleCopyTemplateAndGo}
           >
-            📋 Copiar formato y abrir ChatGPT
+            Copiar formato y abrir ChatGPT
           </ClayButton>
           <TouchableOpacity
             style={[styles.aiSecondaryButton, neuSurface(scheme, 'raised')]}
@@ -436,7 +429,7 @@ export default function RecipesScreen() {
     <View style={styles.emptyContainer}>
       {savedRecipes.length === 0 ? (
         <>
-          <Text style={[styles.emptyIcon]}>📖</Text>
+          <Ionicons name="book-outline" size={56} color={colors.primary} style={styles.emptyIcon} />
           <Text style={[styles.emptyTitle, { color: colors.text }]}>
             Aún no tienes recetas guardadas
           </Text>
@@ -452,7 +445,7 @@ export default function RecipesScreen() {
         </>
       ) : suggestedRecipes.length === 0 ? (
         <>
-          <Text style={[styles.emptyIcon]}>🍳</Text>
+          <Ionicons name="restaurant-outline" size={56} color={colors.primary} style={styles.emptyIcon} />
           <Text style={[styles.emptyTitle, { color: colors.text }]}>
             Descubre qué puedes cocinar
           </Text>
@@ -473,22 +466,25 @@ export default function RecipesScreen() {
           loading={suggesting}
           style={{ flex: 1 }}
         >
-          🔍 Sugerir recetas
+          Sugerir recetas
         </ClayButton>
         <TouchableOpacity
           style={[styles.personalizeButton, neuSurface(scheme, 'raised')]}
           onPress={handleOpenPersonalize}
+          accessibilityRole="button"
+          accessibilityLabel="Personalizar sugerencias"
         >
-          <Text style={[styles.personalizeButtonText, { color: colors.primary }]}>⚙️</Text>
+          <Ionicons name="options-outline" size={22} color={colors.primary} />
         </TouchableOpacity>
       </View>
 
       <TouchableOpacity
         style={[styles.aiButton, neuSurface(scheme, 'raised')]}
         onPress={handleOpenAI}
+        accessibilityRole="button"
       >
         <Text style={[styles.aiButtonText, { color: colors.text }]}>
-          🤖 Generar con IA (ChatGPT)
+          <Ionicons name="sparkles-outline" size={16} color={colors.accent} />{' '}Generar con IA (ChatGPT)
         </Text>
       </TouchableOpacity>
 
@@ -518,7 +514,7 @@ export default function RecipesScreen() {
       contentContainerStyle={styles.list}
       ListEmptyComponent={
         <View style={styles.emptyContainer}>
-          <Text style={[styles.emptyIcon]}>📖</Text>
+          <Ionicons name="book-outline" size={56} color={colors.primary} style={styles.emptyIcon} />
           <Text style={[styles.emptyTitle, { color: colors.text }]}>
             Sin recetas guardadas
           </Text>

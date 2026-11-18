@@ -7,7 +7,6 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Colors } from '@/constants/theme';
-import { neuShadow } from '@/lib/neumorphic';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
@@ -29,15 +28,14 @@ export function ClayChip({ label, active = false, onPress, style }: ClayChipProp
   }));
 
   const bg = active ? colors.primary : colors.surface;
-  const textColor = active ? '#ffffff' : colors.text;
-  const borderColor = active ? colors.primaryDark : 'rgba(255,255,255,0.8)';
-  const shadow = active ? neuShadow(scheme, 'pressed') : neuShadow(scheme, 'raised');
+  const textColor = active ? colors.onPrimary : colors.text;
+  const borderColor = active ? colors.primary : colors.border;
 
   return (
     <AnimatedPressable
       style={[
         styles.base,
-        { backgroundColor: bg, borderColor, ...shadow },
+        { backgroundColor: bg, borderColor },
         animatedStyle,
         style,
       ]}
@@ -48,6 +46,8 @@ export function ClayChip({ label, active = false, onPress, style }: ClayChipProp
       onPressOut={() => {
         scale.value = withSpring(1);
       }}
+      accessibilityRole="button"
+      accessibilityState={{ selected: active }}
     >
       <Text style={[styles.label, { color: textColor }]} numberOfLines={1}>
         {label}
@@ -60,8 +60,8 @@ const styles = StyleSheet.create({
   base: {
     paddingVertical: 8,
     paddingHorizontal: 16,
-    borderRadius: 20,
-    borderWidth: 1.5,
+    borderRadius: 9999,
+    borderWidth: 1,
     marginRight: 8,
   },
   label: {

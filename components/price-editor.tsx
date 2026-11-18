@@ -1,3 +1,4 @@
+import { Ionicons } from '@expo/vector-icons';
 import { useState } from 'react';
 import {
     ActivityIndicator,
@@ -73,7 +74,7 @@ export function PriceEditor({
           accessibilityLabel="Confirmar precio"
           accessibilityRole="button"
         >
-          <Text style={styles.confirmIcon}>✓</Text>
+          <Ionicons name="checkmark" size={20} color={colors.onPrimary} />
         </TouchableOpacity>
       )}
       <TouchableOpacity
@@ -82,9 +83,7 @@ export function PriceEditor({
         accessibilityLabel="Cancelar edición"
         accessibilityRole="button"
       >
-        <Text style={[styles.cancelIcon, { color: colors.textSecondary }]}>
-          ✕
-        </Text>
+<Ionicons name="close" size={20} color={colors.textSecondary} />
       </TouchableOpacity>
     </View>
   );

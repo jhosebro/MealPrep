@@ -9,7 +9,7 @@ interface AuthState {
   loading: boolean;
   initialized: boolean;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
-  signUp: (email: string, password: string) => Promise<{ error: Error | null }>;
+  signUp: (email: string, password: string) => Promise<{ error: Error | null; needsConfirmation?: boolean }>;
   signOut: () => Promise<void>;
   initialize: () => Promise<void>;
   setUser: (user: { id: string; email?: string } | null) => void;
@@ -45,9 +45,12 @@ export const useAuthStore = create<AuthState>((set) => ({
       set({ loading: false });
       return { error };
     }
-    if (data.session) {
-      await AsyncStorage.setItem(SESSION_KEY, JSON.stringify(data.session));
+    // Con confirmación de correo activa no hay sesión: no marcar al usuario como logueado.
+    if (!data.session) {
+      set({ loading: false });
+      return { error: null, needsConfirmation: true };
     }
+    await AsyncStorage.setItem(SESSION_KEY, JSON.stringify(data.session));
     set({ user: data.user, loading: false, initialized: true });
     return { error: null };
   },

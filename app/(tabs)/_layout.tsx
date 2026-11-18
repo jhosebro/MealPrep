@@ -7,7 +7,6 @@ import { IconSymbol } from '@/components/ui/icon-symbol';
 import { WebLayoutShell } from '@/components/web-layout-shell';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import { neuShadow } from '@/lib/neumorphic';
 import { useAuthStore } from '@/stores/authStore';
 import { BREAKPOINTS } from '@/types';
 
@@ -34,23 +33,19 @@ export default function TabLayout() {
 
   if (!initialized) {
     return (
-      <View style={styles.loading}>
-        <ActivityIndicator size="large" />
+      <View style={[styles.loading, { backgroundColor: colors.background }]}>
+        <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
   }
 
   if (!user) {
     return (
-      <View style={styles.loading}>
-        <ActivityIndicator size="large" />
+      <View style={[styles.loading, { backgroundColor: colors.background }]}>
+        <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
   }
-
-  const tabShadow = Platform.OS === 'android'
-    ? { elevation: 8 }
-    : neuShadow(scheme, 'raised');
 
   return (
     <WebLayoutShell>
@@ -64,15 +59,14 @@ export default function TabLayout() {
             ? { display: 'none' }
             : {
                 backgroundColor: colors.surface,
-                borderTopWidth: 0,
-                paddingTop: 6,
-                ...tabShadow,
+                borderTopWidth: StyleSheet.hairlineWidth,
+                borderTopColor: colors.border,
               },
         }}>
         <Tabs.Screen
           name="home"
           options={{
-            title: 'Home',
+            title: 'Inicio',
             tabBarIcon: ({ color }) => <IconSymbol size={28} name="house.fill" color={color} />,
           }}
         />

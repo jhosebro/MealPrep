@@ -3,10 +3,14 @@ import { ActivityIndicator, Text, TouchableOpacity, View } from "react-native";
 import { useRouter } from "expo-router";
 import { useAuthStore } from "@/stores/authStore";
 import { biometricService } from "@/services/biometricService";
+import { BrandMark } from "@/components/brand-logo";
+import { Colors } from "@/constants/theme";
+import { useColorScheme } from "@/hooks/use-color-scheme";
 
 export default function Index() {
   const { user, initialize } = useAuthStore();
   const router = useRouter();
+  const colors = Colors[useColorScheme() === "dark" ? "dark" : "light"];
   const [ready, setReady] = useState(false);
   const [biometricFailed, setBiometricFailed] = useState(false);
 
@@ -44,18 +48,20 @@ export default function Index() {
 
   if (biometricFailed) {
     return (
-      <View style={{ flex: 1, justifyContent: "center", alignItems: "center", padding: 20 }}>
-        <Text style={{ fontSize: 18, marginBottom: 16, textAlign: "center" }}>
+      <View style={{ flex: 1, justifyContent: "center", alignItems: "center", padding: 20, gap: 8, backgroundColor: colors.background }}>
+        <BrandMark size={72} />
+        <Text style={{ fontSize: 18, marginBottom: 16, textAlign: "center", color: colors.text }}>
           No pudimos autenticarte con tu huella
         </Text>
         <TouchableOpacity
           style={{
-            backgroundColor: "#4CAF50",
+            backgroundColor: colors.primary,
             paddingHorizontal: 24,
             paddingVertical: 12,
             borderRadius: 12,
             marginBottom: 12,
           }}
+          accessibilityRole="button"
           onPress={async () => {
             const ok = await biometricService.authenticate();
             if (ok) {
@@ -63,12 +69,12 @@ export default function Index() {
             }
           }}
         >
-          <Text style={{ color: "#fff", fontSize: 16, fontWeight: "600" }}>
+          <Text style={{ color: colors.onPrimary, fontSize: 16, fontWeight: "600" }}>
             Intentar de nuevo
           </Text>
         </TouchableOpacity>
-        <TouchableOpacity onPress={() => router.replace("/login" as any)}>
-          <Text style={{ color: "#4CAF50", fontSize: 16 }}>
+        <TouchableOpacity accessibilityRole="button" onPress={() => router.replace("/login" as any)}>
+          <Text style={{ color: colors.primary, fontSize: 16 }}>
             Usar contraseña
           </Text>
         </TouchableOpacity>
@@ -77,8 +83,9 @@ export default function Index() {
   }
 
   return (
-    <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
-      <ActivityIndicator size="large" color="#4CAF50" />
+    <View style={{ flex: 1, justifyContent: "center", alignItems: "center", gap: 24, backgroundColor: colors.background }}>
+      <BrandMark size={96} />
+      <ActivityIndicator color={colors.primary} />
     </View>
   );
 }

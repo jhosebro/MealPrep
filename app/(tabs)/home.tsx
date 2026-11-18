@@ -1,4 +1,6 @@
+import { BrandMark } from '@/components/brand-logo';
 import { ClayButton, ClayCard } from '@/components/clay';
+import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { neuSurface } from '@/lib/neumorphic';
@@ -111,20 +113,29 @@ export default function HomeScreen() {
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={styles.header}>
-        <View>
-          <Text style={[styles.title, { color: colors.text }]}>Hola!</Text>
-          <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
-            {items.length} ingredientes en tu fridge
-          </Text>
+        <View style={styles.headerText}>
+          <BrandMark size={44} />
+          <View>
+            <Text style={[styles.title, { color: colors.text }]}>¡Hola!</Text>
+            <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
+              {items.length === 1 ? '1 ingrediente' : `${items.length} ingredientes`} en tu nevera
+            </Text>
+          </View>
         </View>
-        <TouchableOpacity onPress={() => setShowSettings(true)}>
-          <Text style={{ fontSize: 28 }}>⚙️</Text>
-        </TouchableOpacity>
+        <Pressable
+          onPress={() => setShowSettings(true)}
+          accessibilityRole="button"
+          accessibilityLabel="Configuración"
+          hitSlop={8}
+          style={({ pressed }) => [styles.iconButton, { backgroundColor: pressed ? colors.surfacePressed : colors.surface, borderColor: colors.border }]}
+        >
+          <Ionicons name="settings-outline" size={22} color={colors.text} />
+        </Pressable>
       </View>
 
-      <Modal visible={showSettings} transparent animationType="slide">
+      <Modal visible={showSettings} transparent animationType="slide" onRequestClose={() => setShowSettings(false)}>
         <View style={[styles.modalOverlay, { backgroundColor: colors.overlay }]}>
-          <View style={[styles.modalContent, { backgroundColor: colors.background }]}>
+          <View style={[styles.modalContent, { backgroundColor: colors.surface }]}>
             <Text style={[styles.modalTitle, { color: colors.text }]}>Configuración</Text>
 
             <View style={styles.settingRow}>
@@ -134,13 +145,15 @@ export default function HomeScreen() {
               <Switch
                 value={biometricEnabled}
                 onValueChange={handleBiometricToggle}
-                trackColor={{ false: '#767577', true: colors.primary }}
+                trackColor={{ false: colors.border, true: colors.primary }}
+                accessibilityLabel="Desbloqueo con huella"
               />
             </View>
 
             <TouchableOpacity
               style={[styles.signOutButton, neuSurface(scheme, 'raised'), { borderColor: colors.danger }]}
               onPress={handleSignOut}
+              accessibilityRole="button"
             >
               <Text style={{ color: colors.danger, fontSize: 16, fontWeight: '600' }}>
                 Cerrar sesión
@@ -149,7 +162,8 @@ export default function HomeScreen() {
 
             <Pressable
               onPress={() => setShowSettings(false)}
-              style={[styles.closeButton, neuSurface(scheme, 'raised')]}
+              accessibilityRole="button"
+              style={[styles.closeButton, neuSurface(scheme, 'flat')]}
             >
               <Text style={[styles.closeButtonText, { color: colors.text }]}>Cerrar</Text>
             </Pressable>
@@ -163,43 +177,59 @@ export default function HomeScreen() {
         showsVerticalScrollIndicator={false}
       >
       <View style={styles.content}>
-        <Pressable onPress={() => router.push('/(tabs)/fridge')}>
-          <ClayCard style={styles.card}>
-            <Text style={[styles.cardTitle, { color: colors.text }]}>🥗 Mi Nevera</Text>
-            <Text style={[styles.cardText, { color: colors.textSecondary }]}>
-              {items.length === 0
-                ? 'Agrega tus ingredientes'
-                : `${items.length} items`}
-            </Text>
+        <Pressable onPress={() => router.push('/(tabs)/fridge')} accessibilityRole="button">
+          {({ pressed }) => (
+          <ClayCard style={[styles.card, pressed && { opacity: 0.85 }]}>
+            <View style={[styles.cardIcon, { backgroundColor: colors.primarySoft }]}>
+              <Ionicons name="nutrition-outline" size={24} color={colors.primaryDark} />
+            </View>
+            <View style={styles.cardBody}>
+              <Text style={[styles.cardTitle, { color: colors.text }]}>Mi nevera</Text>
+              <Text style={[styles.cardText, { color: colors.textSecondary }]}>
+                {items.length === 0 ? 'Agrega tus ingredientes' : `${items.length} ingredientes guardados`}
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
           </ClayCard>
+          )}
         </Pressable>
 
-        <Pressable onPress={() => router.push('/(tabs)/recipes')}>
-          <ClayCard style={styles.card}>
-            <Text style={[styles.cardTitle, { color: colors.text }]}>📖 Recetas</Text>
-            <Text style={[styles.cardText, { color: colors.textSecondary }]}>
-              Ver recetas guardadas
-            </Text>
+        <Pressable onPress={() => router.push('/(tabs)/recipes')} accessibilityRole="button">
+          {({ pressed }) => (
+          <ClayCard style={[styles.card, pressed && { opacity: 0.85 }]}>
+            <View style={[styles.cardIcon, { backgroundColor: colors.accentSoft }]}>
+              <Ionicons name="book-outline" size={24} color={colors.accent} />
+            </View>
+            <View style={styles.cardBody}>
+              <Text style={[styles.cardTitle, { color: colors.text }]}>Recetas</Text>
+              <Text style={[styles.cardText, { color: colors.textSecondary }]}>
+                Ver recetas guardadas
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
           </ClayCard>
+          )}
         </Pressable>
 
         {items.length > 0 && (
           <ClayButton onPress={handleGenerate} disabled={loading}>
-            {loading ? 'Generando...' : '✨ Generar Recetas'}
+            {loading ? 'Generando…' : 'Sugerir recetas con mi nevera'}
           </ClayButton>
         )}
       </View>
 
       {nearDepletion.length > 0 && (
         <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>
-            ⏳ Próximos a agotarse
-          </Text>
+          <View style={styles.sectionHeader}>
+            <Ionicons name="time-outline" size={20} color={colors.warning} />
+            <Text style={[styles.sectionTitle, { color: colors.text, marginBottom: 0 }]}>Próximos a agotarse</Text>
+          </View>
           {nearDepletion.slice(0, 5).map((item) => (
             <TouchableOpacity
               key={item.id}
               style={[styles.depletionItem, neuSurface(scheme, 'flat')]}
               onPress={() => router.push(`/fridge/${item.id}` as any)}
+              accessibilityRole="button"
             >
               <View style={styles.depletionContent}>
                 <Text style={[styles.depletionName, { color: colors.text }]}>
@@ -227,8 +257,8 @@ export default function HomeScreen() {
             horizontal
             showsHorizontalScrollIndicator={false}
             renderItem={({ item }) => (
-              <View style={[styles.ingredientChip, neuSurface(scheme, 'raised')]}>
-                <Text style={[styles.ingredientText, { color: colors.text }]}>
+              <View style={[styles.ingredientChip, { backgroundColor: colors.primarySoft }]}>
+                <Text style={[styles.ingredientText, { color: colors.primaryDark }]}>
                   {item.name}
                 </Text>
               </View>
@@ -256,18 +286,32 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     paddingHorizontal: 16,
     paddingTop: 60,
-    paddingBottom: 16,
+    paddingBottom: 8,
+  },
+  headerText: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    flexShrink: 1,
+  },
+  iconButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   title: {
     fontSize: 28,
-    fontWeight: 'bold',
+    fontWeight: '800',
   },
   subtitle: {
-    fontSize: 16,
-    marginTop: 4,
+    fontSize: 15,
+    marginTop: 2,
   },
   modalOverlay: {
     flex: 1,
@@ -322,11 +366,25 @@ const styles = StyleSheet.create({
   },
   card: {
     marginBottom: 0,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+  },
+  cardIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    borderCurve: 'continuous',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cardBody: {
+    flex: 1,
   },
   cardTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-    marginBottom: 4,
+    fontSize: 18,
+    fontWeight: '700',
+    marginBottom: 2,
   },
   cardText: {
     fontSize: 14,
@@ -357,15 +415,21 @@ const styles = StyleSheet.create({
     fontSize: 14,
     marginLeft: 12,
   },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 12,
+  },
   sectionTitle: {
     fontSize: 18,
-    fontWeight: '600',
+    fontWeight: '700',
     marginBottom: 12,
   },
   ingredientChip: {
     paddingHorizontal: 14,
     paddingVertical: 8,
-    borderRadius: 20,
+    borderRadius: 9999,
     marginRight: 8,
   },
   ingredientText: {

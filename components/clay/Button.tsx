@@ -41,22 +41,22 @@ export function ClayButton({
 
   const variantBg: Record<ButtonVariant, string> = {
     primary: colors.primary,
-    secondary: colors.surface,
+    secondary: colors.primarySoft,
     ghost: 'transparent',
     danger: colors.danger,
   };
 
   const variantTextColor: Record<ButtonVariant, string> = {
-    primary: '#ffffff',
-    secondary: colors.text,
+    primary: colors.onPrimary,
+    secondary: colors.primaryDark,
     ghost: colors.primary,
-    danger: '#ffffff',
+    danger: '#FFFFFF', // texto blanco sobre rojo en ambos modos
   };
 
   const bgColor = variantBg[variant];
   const textColor = variantTextColor[variant];
 
-  const shadow = neuShadow(scheme, 'raised');
+  const shadow = variant === 'primary' ? neuShadow(scheme, 'raised') : {};
 
   return (
     <AnimatedPressable
@@ -65,7 +65,7 @@ export function ClayButton({
         {
           backgroundColor: bgColor,
           opacity: disabled ? 0.5 : 1,
-          ...(variant !== 'ghost' ? shadow : {}),
+          ...shadow,
         },
         animatedStyle,
         style,
@@ -78,6 +78,9 @@ export function ClayButton({
         scale.value = withSpring(1);
       }}
       disabled={disabled || loading}
+      accessibilityRole="button"
+      accessibilityLabel={children}
+      accessibilityState={{ disabled: disabled || loading, busy: loading }}
     >
       {loading ? (
         <ActivityIndicator color={textColor} />
@@ -92,7 +95,9 @@ const styles = StyleSheet.create({
   base: {
     paddingVertical: 14,
     paddingHorizontal: 24,
-    borderRadius: 14,
+    borderRadius: 12,
+    borderCurve: 'continuous',
+    minHeight: 48,
     alignItems: 'center',
     justifyContent: 'center',
   },

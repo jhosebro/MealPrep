@@ -7,8 +7,10 @@ import { BREAKPOINTS, RESPONSIVE_DEFAULTS } from '@/types';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Platform, StyleSheet, Text, TextInput, TouchableOpacity, useWindowDimensions, View } from 'react-native';
+import { BrandLogo } from '@/components/brand-logo';
 import { ClayButton } from '@/components/clay';
 import { neuSurface, neuInset } from '@/lib/neumorphic';
+import { Ionicons } from '@expo/vector-icons';
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -24,6 +26,7 @@ export default function LoginScreen() {
   const [password, setPassword] = useState('');
   const [isSignUp, setIsSignUp] = useState(false);
   const [error, setError] = useState('');
+  const [notice, setNotice] = useState('');
   const [bioAvailable, setBioAvailable] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
 
@@ -60,12 +63,24 @@ export default function LoginScreen() {
     }
 
     setError('');
+    setNotice('');
     const result = isSignUp
       ? await signUp(email, password)
       : await signIn(email, password);
 
     if (result.error) {
-      setError(result.error.message);
+      const AUTH_ERRORS: Record<string, string> = {
+        'Email not confirmed': 'Confirma tu correo antes de iniciar sesión.',
+        'Invalid login credentials': 'Correo o contraseña incorrectos.',
+        'User already registered': 'Ya existe una cuenta con ese correo.',
+      };
+      setError(AUTH_ERRORS[result.error.message] ?? result.error.message);
+      return;
+    }
+
+    if ('needsConfirmation' in result && result.needsConfirmation) {
+      setNotice('Te enviamos un correo. Confirma tu cuenta y luego inicia sesión.');
+      setIsSignUp(false);
       return;
     }
 
@@ -106,8 +121,13 @@ export default function LoginScreen() {
 
   const formContent = (
     <>
-      <Text style={[styles.title, { color: colors.text }]}>MealPrep</Text>
-      <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
+      <View style={styles.brand}>
+        <BrandLogo size={56} />
+      </View>
+      <Text style={[styles.tagline, { color: colors.textSecondary }]}>
+        Cocina con lo que ya tienes en la nevera
+      </Text>
+      <Text style={[styles.subtitle, { color: colors.text }]}>
         {isSignUp ? 'Crea una cuenta' : 'Inicia sesión'}
       </Text>
 
@@ -119,10 +139,10 @@ export default function LoginScreen() {
         accessibilityRole="button"
       >
         {googleLoading ? (
-          <ActivityIndicator color="#333" />
+          <ActivityIndicator color={colors.text} />
         ) : (
           <>
-            <Text style={styles.googleIcon}>G</Text>
+            <Ionicons name="logo-google" size={20} color={colors.text} />
             <Text style={[styles.googleButtonText, { color: colors.text }]}>
               {isSignUp ? 'Registrarse con Google' : 'Continuar con Google'}
             </Text>
@@ -131,15 +151,17 @@ export default function LoginScreen() {
       </TouchableOpacity>
 
       <View style={styles.divider}>
-        <View style={[styles.dividerLine, { backgroundColor: colors.borderInset }]} />
+        <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
         <Text style={[styles.dividerText, { color: colors.textSecondary }]}>o</Text>
-        <View style={[styles.dividerLine, { backgroundColor: colors.borderInset }]} />
+        <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
       </View>
 
       <View style={styles.form}>
         <TextInput
-          style={[neuInset(scheme), { padding: 16, borderRadius: 12, fontSize: 16, marginBottom: 16, color: colors.text }]}
-          placeholder="Email"
+          style={[neuInset(scheme), styles.input, { color: colors.text }]}
+          placeholder="Correo electrónico"
+          accessibilityLabel="Correo electrónico"
+          autoComplete="email"
           placeholderTextColor={colors.textSecondary}
           value={email}
           onChangeText={setEmail}
@@ -147,21 +169,30 @@ export default function LoginScreen() {
           keyboardType="email-address"
         />
         <TextInput
-          style={[neuInset(scheme), { padding: 16, borderRadius: 12, fontSize: 16, marginBottom: 16, color: colors.text }]}
+          style={[neuInset(scheme), styles.input, { color: colors.text }]}
           placeholder="Contraseña"
+          accessibilityLabel="Contraseña"
+          autoComplete={isSignUp ? 'new-password' : 'current-password'}
           placeholderTextColor={colors.textSecondary}
           value={password}
           onChangeText={setPassword}
           secureTextEntry
         />
 
-        {error ? <Text style={[styles.error, { color: colors.danger }]}>{error}</Text> : null}
+        {error ? <Text accessibilityRole="alert" style={[styles.error, { color: colors.danger }]}>{error}</Text> : null}
+        {notice ? (
+          <Text accessibilityRole="alert" style={[styles.notice, { color: colors.primaryDark, backgroundColor: colors.primarySoft }]}>
+            {notice}
+          </Text>
+        ) : null}
 
         {bioAvailable && (
           <TouchableOpacity
-            style={[neuSurface(scheme, 'raised'), { borderWidth: 1.5, borderColor: colors.primary, padding: 14, borderRadius: 12, alignItems: 'center', marginBottom: 16 }]}
+            style={[neuSurface(scheme, 'flat'), styles.bioButton, { borderColor: colors.primary }]}
             onPress={handleBiometricLogin}
+            accessibilityRole="button"
           >
+            <Ionicons name="finger-print" size={20} color={colors.primary} />
             <Text style={{ color: colors.primary, fontSize: 16, fontWeight: '600' }}>
               Iniciar sesión con huella
             </Text>
@@ -174,10 +205,14 @@ export default function LoginScreen() {
 
         <TouchableOpacity
           style={styles.switchButton}
-          onPress={() => setIsSignUp(!isSignUp)}
+          onPress={() => { setIsSignUp(!isSignUp); setError(''); }}
+          accessibilityRole="button"
         >
           <Text style={[styles.switchText, { color: colors.textSecondary }]}>
-            {isSignUp ? '¿Ya tienes cuenta? Inicia sesión' : '¿No tienes cuenta? Regístrate'}
+            {isSignUp ? '¿Ya tienes cuenta? ' : '¿No tienes cuenta? '}
+            <Text style={{ color: colors.primary, fontWeight: '600' }}>
+              {isSignUp ? 'Inicia sesión' : 'Regístrate'}
+            </Text>
           </Text>
         </TouchableOpacity>
       </View>
@@ -210,16 +245,40 @@ const styles = StyleSheet.create({
   desktopContainer: {
     alignItems: 'center',
   },
-  title: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    textAlign: 'center',
+  brand: {
+    alignItems: 'center',
     marginBottom: 8,
   },
-  subtitle: {
-    fontSize: 18,
+  tagline: {
+    fontSize: 15,
     textAlign: 'center',
     marginBottom: 32,
+  },
+  subtitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  input: {
+    padding: 16,
+    fontSize: 16,
+    marginBottom: 12,
+  },
+  notice: {
+    textAlign: 'center',
+    padding: 12,
+    borderRadius: 12,
+    marginBottom: 16,
+    overflow: 'hidden',
+  },
+  bioButton: {
+    flexDirection: 'row',
+    gap: 8,
+    justifyContent: 'center',
+    padding: 14,
+    alignItems: 'center',
+    marginBottom: 16,
   },
   form: {
     width: '100%',
@@ -241,14 +300,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingVertical: 14,
     paddingHorizontal: 24,
-    borderRadius: 14,
+    borderRadius: 12,
     gap: 10,
     marginBottom: 16,
-  },
-  googleIcon: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#4285F4',
   },
   googleButtonText: {
     fontSize: 16,

@@ -1,6 +1,7 @@
 import { PriceEditor } from "@/components/price-editor";
 import { neuSurface, neuInset } from '@/lib/neumorphic';
 import { Colors } from "@/constants/theme";
+import { Ionicons } from "@expo/vector-icons";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { BudgetPurchase } from "@/services/budgetService";
 import { useAuthStore } from "@/stores/authStore";
@@ -389,13 +390,13 @@ export default function ShoppingScreen() {
       <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
         {showArchived
           ? "No tienes comidas archivadas"
-          : "No hay items pendientes 🎉"}
+          : "No hay productos pendientes"}
       </Text>
-      {showArchived && (
-        <Text style={[styles.emptySubtext, { color: colors.textSecondary }]}>
-          Archiva comidas para que no se incluyan en el presupuesto
-        </Text>
-      )}
+      <Text style={[styles.emptySubtext, { color: colors.textSecondary }]}>
+        {showArchived
+          ? "Archiva comidas para que no se incluyan en el presupuesto"
+          : "Los ingredientes de tu nevera que se estén agotando aparecerán aquí"}
+      </Text>
     </View>
   );
 
@@ -417,7 +418,7 @@ export default function ShoppingScreen() {
             <Text style={[styles.archiveToggleText, { color: colors.text }]}>
               {showArchived
                 ? "← Volver a la lista"
-                : `📦 Archivados (${archivedItems.length})`}
+                : `Archivados (${archivedItems.length})`}
             </Text>
           </TouchableOpacity>
         )}
@@ -543,7 +544,7 @@ export default function ShoppingScreen() {
           onPress={() => setShowBudgetModal(true)}
         >
           <Text style={[styles.startBudgetText, { color: colors.text }]}>
-            🎯 Iniciar presupuesto
+            <Ionicons name="wallet-outline" size={16} />{" "}Iniciar presupuesto
           </Text>
         </TouchableOpacity>
       )}
@@ -617,7 +618,7 @@ export default function ShoppingScreen() {
         <View style={[styles.budgetBar, neuSurface(scheme, 'raised')]}>
           <View style={styles.budgetRow}>
             <Text style={[styles.budgetLabel, { color: colors.text }]}>
-              🎯 ${session.amount.toLocaleString()}
+              <Ionicons name="wallet-outline" size={16} />{" "}${session.amount.toLocaleString()}
             </Text>
             <TouchableOpacity onPress={handleFinish} disabled={loading}>
               <Text style={[styles.finishText, { color: colors.primary }]}>
@@ -664,13 +665,7 @@ export default function ShoppingScreen() {
             </Text>
           </View>
         )}
-        ListHeaderComponent={
-          shoppingItems.length > 0 ||
-          archivedItems.length > 0 ||
-          showArchived
-            ? headerComponent
-            : null
-        }
+        ListHeaderComponent={headerComponent}
         ListEmptyComponent={
           showArchived
             ? archivedItems.length === 0
@@ -706,7 +701,7 @@ export default function ShoppingScreen() {
             ]}
           >
             <Text style={[styles.modalTitle, { color: colors.text }]}>
-              🎯 Iniciar presupuesto
+              <Ionicons name="wallet-outline" size={16} />{" "}Iniciar presupuesto
             </Text>
             <TextInput
               style={[
@@ -822,7 +817,7 @@ const styles = StyleSheet.create({
   },
   header: {
     paddingHorizontal: 16,
-    paddingTop: 8,
+    paddingTop: 24,
     paddingBottom: 16,
   },
   title: {

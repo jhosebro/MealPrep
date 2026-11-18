@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { TextInput, View, Text, StyleSheet, type TextInputProps } from 'react-native';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Colors } from '@/constants/theme';
-import { neuShadow } from '@/lib/neumorphic';
 
 interface ClayInputProps extends TextInputProps {
   label?: string;
@@ -15,8 +14,7 @@ export function ClayInput({ label, error, style, ...props }: ClayInputProps) {
   const colors = Colors[scheme];
   const [focused, setFocused] = useState(false);
 
-  const borderColor = error ? colors.danger : focused ? colors.primary : colors.borderInset;
-  const shadow = focused ? neuShadow(scheme, 'flat') : neuShadow(scheme, 'inset');
+  const borderColor = error ? colors.danger : focused ? colors.primary : colors.border;
 
   return (
     <View style={styles.container}>
@@ -25,17 +23,17 @@ export function ClayInput({ label, error, style, ...props }: ClayInputProps) {
         style={[
           styles.input,
           {
-            backgroundColor: colors.surfacePressed,
+            backgroundColor: colors.surface,
             color: colors.text,
             borderColor,
             borderWidth: focused ? 1.5 : 1,
-            ...shadow,
           },
           style,
         ]}
         placeholderTextColor={colors.textSecondary}
         onFocus={() => setFocused(true)}
         onBlur={() => setFocused(false)}
+        accessibilityLabel={props.accessibilityLabel ?? label}
         {...props}
       />
       {error && <Text style={[styles.error, { color: colors.danger }]}>{error}</Text>}
@@ -56,6 +54,7 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     paddingHorizontal: 16,
     borderRadius: 12,
+    borderCurve: 'continuous',
     fontSize: 16,
   },
   error: {
