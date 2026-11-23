@@ -11,6 +11,7 @@ import { CATEGORIES, FridgeItem, Status, STORES, UNITS } from "@/types";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import {
+  ActivityIndicator,
   ScrollView,
   StyleSheet,
   Text,
@@ -19,6 +20,8 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { formatLocalDate, parseLocalDate } from "@/utils/date";
+import { applyConsumption, isValidQuantity, itemFormError } from "@/utils/fridge";
 
 export default function EditItemScreen() {
   const router = useRouter();
@@ -27,7 +30,8 @@ export default function EditItemScreen() {
   const scheme = (colorScheme ?? "light") as "light" | "dark";
   const colors = Colors[scheme];
   const { updateItem, deleteItem, loading } = useFridgeStore();
-  const [dbItem, setDbItem] = useState<FridgeItem | null>(null);
+  // undefined = cargando, null = no existe
+  const [dbItem, setDbItem] = useState<FridgeItem | null | undefined>(undefined);
 
   const [name, setName] = useState("");
   const [quantity, setQuantity] = useState("1");
@@ -45,25 +49,11 @@ export default function EditItemScreen() {
 
   useEffect(() => {
     if (id) {
-      fridgeService.getById(id).then(setDbItem);
+      fridgeService.getById(id).then(setDbItem, () => setDbItem(null));
     }
   }, [id]);
 
   const item = dbItem;
-
-  const formatDate = (date: Date | null) => {
-    if (!date) return "";
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, "0");
-    const day = String(date.getDate()).padStart(2, "0");
-    return `${year}-${month}-${day}`;
-  };
-
-  const parseDate = (str: string | null | undefined): Date | null => {
-    if (!str) return null;
-    const d = new Date(str);
-    return isNaN(d.getTime()) ? null : d;
-  };
 
   useEffect(() => {
     if (item) {
@@ -81,8 +71,8 @@ export default function EditItemScreen() {
         setPriceMode("total");
         setPrice(item.price?.toString() || "");
       }
-      setPurchaseDate(parseDate(item.purchase_date));
-      setExpiryDate(parseDate(item.expiry_date));
+      setPurchaseDate(parseLocalDate(item.purchase_date));
+      setExpiryDate(parseLocalDate(item.expiry_date));
 
       setStatus(item.status || "available");
       setArchived(item.archived ?? false);
@@ -99,35 +89,15 @@ export default function EditItemScreen() {
   }, [item]);
 
   const qty = Number(quantity);
-  const qtyValid = quantity.trim() !== "" && Number.isInteger(qty) && qty >= 0;
+  const qtyValid = isValidQuantity(quantity);
 
   const handleSave = async () => {
     setError("");
-    if (!name.trim()) return setError("El nombre es requerido");
-    if (!qtyValid) return setError("La cantidad debe ser un número entero (0 o más)");
+    const formError = itemFormError(name, quantity);
+    if (formError) return setError(formError);
     const finalStatus = qty === 0 ? "empty" : status;
-    const savedPurchaseDate = formatDate(purchaseDate) || null;
-
-    let avgDays = item?.avg_days_per_unit ?? null;
-    let totalConsumed = item?.total_consumed ?? 0;
-
-    if (finalStatus === "empty") {
-      const startDate = savedPurchaseDate || item?.created_at;
-      if (startDate) {
-        const todayStr = new Date().toISOString().split("T")[0];
-        const days = Math.round(
-          (new Date(todayStr).getTime() - new Date(startDate).getTime()) / (1000 * 60 * 60 * 24)
-        );
-        if (days > 0) {
-          if (totalConsumed > 0 && avgDays != null) {
-            avgDays = ((avgDays * totalConsumed) + (days * qty)) / (totalConsumed + qty);
-          } else {
-            avgDays = days / qty;
-          }
-          totalConsumed += qty;
-        }
-      }
-    }
+    const savedPurchaseDate = formatLocalDate(purchaseDate) || null;
+    const consumption = applyConsumption(item, finalStatus, savedPurchaseDate);
 
     try {
       await updateItem(id, {
@@ -140,10 +110,9 @@ export default function EditItemScreen() {
         store_name: showCustomStore
           ? storeName.trim() || null
           : storeName || null,
-        expiry_date: formatDate(expiryDate) || null,
+        expiry_date: formatLocalDate(expiryDate) || null,
         status: finalStatus,
-        avg_days_per_unit: avgDays,
-        total_consumed: totalConsumed,
+        ...consumption,
         archived,
       });
       router.back();
@@ -154,15 +123,23 @@ export default function EditItemScreen() {
 
   const handleDelete = () => {
     showConfirm("Eliminar alimento", `¿Estás seguro de eliminar "${name}"?`, async () => {
-      await deleteItem(id);
-      router.back();
+      try {
+        await deleteItem(id);
+        router.back();
+      } catch {
+        setError("No se pudo eliminar. Intenta de nuevo.");
+      }
     }, "Eliminar");
   };
 
   if (!item) {
     return (
-      <View style={[styles.container, { backgroundColor: colors.background }]}>
-        <Text style={{ color: colors.text }}>Item no encontrado</Text>
+      <View style={[styles.container, { backgroundColor: colors.background, justifyContent: "center", alignItems: "center" }]}>
+        {item === undefined ? (
+          <ActivityIndicator color={colors.tint} accessibilityLabel="Cargando alimento" />
+        ) : (
+          <Text style={{ color: colors.text }}>Item no encontrado</Text>
+        )}
       </View>
     );
   }

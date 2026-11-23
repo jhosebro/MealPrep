@@ -7,11 +7,12 @@ import {
     Difficulty,
     MEAL_TYPES,
     MealType,
-    Recipe,
     RECIPE_JSON_TEMPLATE,
 } from '@/types';
+import { buildManualRecipe, parseRecipeJson } from '@/utils/recipe-validation';
 import { ClayButton } from '@/components/clay/Button';
 import { ClayChip } from '@/components/clay/Chip';
+import { showAlert } from '@/lib/confirm';
 import { neuSurface, neuInset } from '@/lib/neumorphic';
 import * as Clipboard from 'expo-clipboard';
 import { useRouter } from 'expo-router';
@@ -27,14 +28,6 @@ import {
     View,
 } from 'react-native';
 
-const showAlert = (title: string, message: string) => {
-  if (Platform.OS === 'web') {
-    window.alert(`${title}\n${message}`);
-  } else {
-    const { Alert } = require('react-native');
-    Alert.alert(title, message);
-  }
-};
 
 type CreateMode = 'manual' | 'json';
 
@@ -65,110 +58,21 @@ export default function CreateRecipeScreen() {
     showAlert('Copiado', 'Plantilla JSON copiada al portapapeles');
   };
 
-  const validateRecipe = (recipe: any): Recipe | null => {
-    if (!recipe.title || typeof recipe.title !== 'string') {
-      showAlert('Error', 'El campo "title" es requerido y debe ser texto');
-      return null;
-    }
-    if (!MEAL_TYPES.includes(recipe.meal_type)) {
-      showAlert('Error', `"meal_type" debe ser: ${MEAL_TYPES.join(', ')}`);
-      return null;
-    }
-    if (!Array.isArray(recipe.ingredients) || recipe.ingredients.length === 0) {
-      showAlert('Error', '"ingredients" debe ser un array con al menos 1 elemento');
-      return null;
-    }
-    if (!Array.isArray(recipe.steps) || recipe.steps.length === 0) {
-      showAlert('Error', '"steps" debe ser un array con al menos 1 paso');
-      return null;
-    }
-
-    const validatedRecipe: Recipe = {
-      title: recipe.title.trim(),
-      meal_type: recipe.meal_type,
-      servings: Number(recipe.servings) || 1,
-      prep_time_minutes: recipe.prep_time_minutes ? Number(recipe.prep_time_minutes) : undefined,
-      difficulty: recipe.difficulty && DIFFICULTIES.includes(recipe.difficulty) ? recipe.difficulty : undefined,
-      ingredients: recipe.ingredients.map((i: any) => String(i).trim()).filter(Boolean),
-      steps: recipe.steps.map((s: any) => String(s).trim()).filter(Boolean),
-      notes: recipe.notes ? String(recipe.notes).trim() : undefined,
-    };
-
-    return validatedRecipe;
-  };
-
-  const handleSaveJson = async () => {
-    if (!user) {
-      showAlert('Error', 'Debes iniciar sesión');
-      return;
-    }
-
-    const trimmed = jsonText.trim();
-    if (!trimmed) {
-      showAlert('Error', 'Pega el JSON de la receta');
-      return;
-    }
-
-    let parsed: any;
-    try {
-      parsed = JSON.parse(trimmed);
-    } catch {
-      showAlert('Error', 'El JSON no es válido. Revisa el formato.');
-      return;
-    }
-
-    const recipe = validateRecipe(parsed);
-    if (!recipe) return;
-
-    await saveRecipe(user.id, recipe);
+  const save = async (result: ReturnType<typeof parseRecipeJson>) => {
+    if (!user) return showAlert('Error', 'Debes iniciar sesión');
+    if (!result.recipe) return showAlert('Error', result.error);
+    await saveRecipe(user.id, result.recipe);
+    // el store no lanza: guarda el error en state
+    const saveError = useRecipesStore.getState().error;
+    if (saveError) return showAlert('Error', saveError);
     router.back();
     showAlert('Éxito', 'Receta guardada');
   };
 
-  const handleSaveManual = async () => {
-    if (!user) {
-      showAlert('Error', 'Debes iniciar sesión');
-      return;
-    }
+  const handleSaveJson = () => save(parseRecipeJson(jsonText));
 
-    if (!title.trim()) {
-      showAlert('Error', 'El nombre de la receta es requerido');
-      return;
-    }
-
-    const ingredients = ingredientsText
-      .split('\n')
-      .map((l) => l.trim())
-      .filter(Boolean);
-    if (ingredients.length === 0) {
-      showAlert('Error', 'Agrega al menos un ingrediente');
-      return;
-    }
-
-    const steps = stepsText
-      .split('\n')
-      .map((l) => l.trim())
-      .filter(Boolean);
-    if (steps.length === 0) {
-      showAlert('Error', 'Agrega al menos un paso');
-      return;
-    }
-
-    const recipe: Recipe = {
-      title: title.trim(),
-      meal_type: mealType,
-      servings: Number(servings) || 1,
-      prep_time_minutes: prepTime ? Number(prepTime) : undefined,
-      difficulty,
-      ingredients,
-      steps,
-      notes: notes.trim() || undefined,
-    };
-
-    await saveRecipe(user.id, recipe);
-    router.back();
-    showAlert('Éxito', 'Receta guardada');
-  };
+  const handleSaveManual = () =>
+    save(buildManualRecipe({ title, mealType, servings, prepTime, difficulty, ingredientsText, stepsText, notes }));
 
   const renderModeToggle = () => (
     <View style={styles.modeToggle}>

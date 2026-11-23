@@ -16,3 +16,9 @@ export const showConfirm = (
     ]);
   }
 };
+
+/** Aviso simple que funciona en web. */
+export const showAlert = (title: string, message: string) => {
+  if (Platform.OS === 'web') window.alert(`${title}\n${message}`);
+  else Alert.alert(title, message);
+};

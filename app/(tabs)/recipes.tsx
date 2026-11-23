@@ -3,6 +3,7 @@ import { Colors, MealTypeColors, MealTypeDefault } from '@/constants/theme';
 import { Ionicons } from '@expo/vector-icons';
 
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { showAlert } from '@/lib/confirm';
 import { neuSurface, neuInset } from '@/lib/neumorphic';
 import { recipesService } from '@/services/recipesService';
 import { useAuthStore } from '@/stores/authStore';
@@ -25,14 +26,6 @@ import {
   View,
 } from 'react-native';
 
-const showAlert = (title: string, message: string) => {
-  if (Platform.OS === 'web') {
-    window.alert(`${title}\n${message}`);
-  } else {
-    const { Alert } = require('react-native');
-    Alert.alert(title, message);
-  }
-};
 
 export default function RecipesScreen() {
   const router = useRouter();

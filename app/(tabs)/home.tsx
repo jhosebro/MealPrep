@@ -4,7 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { neuSurface } from '@/lib/neumorphic';
-import { showConfirm } from '@/lib/confirm';
+import { showAlert, showConfirm } from '@/lib/confirm';
 import { accountService } from '@/services/accountService';
 import { biometricService } from '@/services/biometricService';
 import * as Clipboard from 'expo-clipboard';
@@ -12,6 +12,7 @@ import { useAuthStore } from '@/stores/authStore';
 import { useFridgeStore } from '@/stores/fridgeStore';
 import { useRecipesStore } from '@/stores/recipesStore';
 import { useRouter } from 'expo-router';
+import { depletionLabel, isNearDepletion } from '@/utils/fridge';
 import { useEffect, useMemo, useState } from 'react';
 import {
   Alert,
@@ -58,12 +59,7 @@ export default function HomeScreen() {
   const ingredientNames = availableItems.map((item) => item.name);
 
   const nearDepletion = useMemo(() => {
-    return items.filter((item) => {
-      if (item.status === "empty") return false;
-      if (item.status === "low") return true;
-      if (item.avg_days_per_unit != null && item.avg_days_per_unit * item.quantity < 3) return true;
-      return false;
-    });
+    return items.filter(isNearDepletion);
   }, [items]);
 
   const handleGenerate = async () => {
@@ -82,7 +78,7 @@ export default function HomeScreen() {
     if (value) {
       const available = await biometricService.isAvailable();
       if (!available) {
-        Alert.alert('No disponible', 'Tu dispositivo no tiene huella configurada.');
+        showAlert('No disponible', 'Tu dispositivo no tiene huella configurada.');
         return;
       }
     }
@@ -90,15 +86,13 @@ export default function HomeScreen() {
     setBiometricEnabled(value);
   };
 
-  const notify = (title: string, msg: string) =>
-    Platform.OS === 'web' ? window.alert(`${title}\n${msg}`) : Alert.alert(title, msg);
 
   const handleExportData = async () => {
     try {
       await Clipboard.setStringAsync(await accountService.exportMyData());
-      notify('Datos exportados', 'Copiamos todos tus datos (JSON) al portapapeles.');
+      showAlert('Datos exportados', 'Copiamos todos tus datos (JSON) al portapapeles.');
     } catch {
-      notify('Error', 'No se pudieron exportar tus datos. Inténtalo de nuevo.');
+      showAlert('Error', 'No se pudieron exportar tus datos. Inténtalo de nuevo.');
     }
   };
 
@@ -113,7 +107,7 @@ export default function HomeScreen() {
           await signOut();
           router.replace('/login' as any);
         } catch {
-          notify('Error', 'No se pudo eliminar la cuenta. Inténtalo de nuevo.');
+          showAlert('Error', 'No se pudo eliminar la cuenta. Inténtalo de nuevo.');
         }
       },
       'Eliminar',
@@ -285,7 +279,7 @@ export default function HomeScreen() {
                   {item.name}
                 </Text>
                 <Text style={[styles.depletionDetail, { color: colors.textSecondary }]}>
-                  {item.status === "low" ? "Próximo a agotarse" : `~${Math.round((item.avg_days_per_unit ?? 0) * item.quantity)} días`}
+                  {depletionLabel(item)}
                 </Text>
               </View>
               <Text style={[styles.depletionQty, { color: colors.textSecondary }]}>

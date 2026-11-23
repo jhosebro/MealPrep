@@ -9,10 +9,12 @@ import { useBudgetStore } from "@/stores/budgetStore";
 import { useFridgeStore } from "@/stores/fridgeStore";
 import { CATEGORIES, FridgeItem, Status, STORES } from "@/types";
 import { computeShoppingTotal } from "@/utils/compute-shopping-total";
+import { formatLocalDate } from "@/utils/date";
+import { parseBudgetAmount, shoppingList, storeKey } from "@/utils/shopping";
+import { showAlert } from "@/lib/confirm";
 import { useFocusEffect } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-    Alert,
     Animated,
     Modal,
     RefreshControl,
@@ -31,6 +33,7 @@ const statusLabel: Record<Status, string> = {
   low: "Próximo a agotarse",
   empty: "Agotado",
 };
+
 
 export default function ShoppingScreen() {
   const colorScheme = useColorScheme();
@@ -103,12 +106,7 @@ export default function ShoppingScreen() {
     setRefreshing(false);
   };
 
-  const shoppingItems = useMemo(() => {
-    return items.filter(
-      (i) =>
-        !i.archived && (i.status === "low" || i.status === "empty"),
-    );
-  }, [items]);
+  const shoppingItems = useMemo(() => shoppingList(items), [items]);
 
   const archivedItems = useMemo(() => {
     return items.filter((i) => i.archived);
@@ -132,10 +130,10 @@ export default function ShoppingScreen() {
     }
     if (selectedStore) {
       result = result.filter(
-        (i) => (i.store_name || "Otro") === selectedStore,
+        (i) => storeKey(i.store_name) === selectedStore,
       );
     }
-    return result.sort((a, b) => {
+    return [...result].sort((a, b) => {
       if (a.status === "empty" && b.status !== "empty") return -1;
       if (a.status !== "empty" && b.status === "empty") return 1;
       return 0;
@@ -166,7 +164,7 @@ export default function ShoppingScreen() {
   const storeCounts = useMemo(() => {
     const counts = new Map<string, number>();
     shoppingItems.forEach((i) => {
-      const store = i.store_name || "Otro";
+      const store = storeKey(i.store_name);
       counts.set(store, (counts.get(store) || 0) + 1);
     });
     return counts;
@@ -176,15 +174,15 @@ export default function ShoppingScreen() {
     if (!user) return;
     if (!session) {
       try {
-        const today = new Date().toISOString().split("T")[0];
+        const today = formatLocalDate(new Date());
         await updateItem(item.id, { status: "available", purchase_date: today });
       } catch {
-        Alert.alert("Error", "No se pudo marcar como comprado");
+        showAlert("Error", "No se pudo marcar como comprado");
       }
       return;
     }
     try {
-      const today = new Date().toISOString().split("T")[0];
+      const today = formatLocalDate(new Date());
       await markBought(
         session.id,
         item.id,
@@ -193,7 +191,7 @@ export default function ShoppingScreen() {
       );
       await updateItem(item.id, { status: "available", purchase_date: today });
     } catch (e) {
-      Alert.alert("Error", (e as Error).message);
+      showAlert("Error", (e as Error).message);
     }
   };
 
@@ -203,14 +201,14 @@ export default function ShoppingScreen() {
       await undoPurchase(purchase);
       await fetchItems(user.id);
     } catch (e) {
-      Alert.alert("Error", (e as Error).message);
+      showAlert("Error", (e as Error).message);
     }
   };
 
   const handleStartBudget = async () => {
-    const amount = parseFloat(budgetAmount);
-    if (!amount || amount <= 0) {
-      Alert.alert("Error", "Ingresa un monto válido");
+    const amount = parseBudgetAmount(budgetAmount);
+    if (!amount) {
+      showAlert("Error", "Ingresa un monto válido");
       return;
     }
     if (!user) return;
@@ -219,7 +217,7 @@ export default function ShoppingScreen() {
       setShowBudgetModal(false);
       setBudgetAmount("");
     } catch (e) {
-      Alert.alert("Error", (e as Error).message);
+      showAlert("Error", (e as Error).message);
     }
   };
 
@@ -249,7 +247,7 @@ export default function ShoppingScreen() {
       await updateItem(item.id, { archived });
       if (editingItemId === item.id) setEditingItemId(null);
     } catch (e) {
-      Alert.alert("Error", (e as Error).message);
+      showAlert("Error", (e as Error).message);
     }
   };
 
@@ -260,7 +258,7 @@ export default function ShoppingScreen() {
       setEditingItemId(null);
       setFlashItemId(itemId);
     } catch {
-      Alert.alert('Error', 'No se pudo guardar el precio. Intenta de nuevo.');
+      showAlert('Error', 'No se pudo guardar el precio. Intenta de nuevo.');
     } finally {
       setSavingPrice(false);
     }

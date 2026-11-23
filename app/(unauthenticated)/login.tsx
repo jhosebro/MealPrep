@@ -10,6 +10,7 @@ import { ActivityIndicator, Alert, Platform, StyleSheet, Text, TextInput, Toucha
 import { BrandLogo } from '@/components/brand-logo';
 import { ClayButton } from '@/components/clay';
 import { neuSurface, neuInset } from '@/lib/neumorphic';
+import { loginFormError, translateAuthError } from '@/utils/auth-errors';
 import { Ionicons } from '@expo/vector-icons';
 
 export default function LoginScreen() {
@@ -57,8 +58,9 @@ export default function LoginScreen() {
   };
 
   const handleSubmit = async () => {
-    if (!email || !password) {
-      setError('Por favor completa todos los campos');
+    const formError = loginFormError(email, password);
+    if (formError) {
+      setError(formError);
       return;
     }
 
@@ -69,12 +71,7 @@ export default function LoginScreen() {
       : await signIn(email, password);
 
     if (result.error) {
-      const AUTH_ERRORS: Record<string, string> = {
-        'Email not confirmed': 'Confirma tu correo antes de iniciar sesión.',
-        'Invalid login credentials': 'Correo o contraseña incorrectos.',
-        'User already registered': 'Ya existe una cuenta con ese correo.',
-      };
-      setError(AUTH_ERRORS[result.error.message] ?? result.error.message);
+      setError(translateAuthError(result.error.message));
       return;
     }
 

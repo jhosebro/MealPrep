@@ -1,17 +1,17 @@
 import { Colors } from "@/constants/theme";
 import { Ionicons } from "@expo/vector-icons";
 import { ClayChip } from "@/components/clay";
-import { showConfirm } from "@/lib/confirm";
+import { showAlert, showConfirm } from "@/lib/confirm";
 import { neuInset, neuSurface } from "@/lib/neumorphic";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useAuthStore } from "@/stores/authStore";
 import { useFridgeStore } from "@/stores/fridgeStore";
 import { CATEGORIES, FridgeItem, Status } from "@/types";
+import { buildFridgeExport, daysLeft, fridgeSections } from "@/utils/fridge";
 import * as Clipboard from "expo-clipboard";
 import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
 import {
-  Alert,
   Platform,
   RefreshControl,
   ScrollView,
@@ -44,28 +44,10 @@ export default function FridgeScreen() {
 
   const normalizedQuery = useMemo(() => searchQuery.trim().toLowerCase(), [searchQuery]);
 
-  const sections = useMemo(() => {
-    return CATEGORIES.map((cat) => ({
-      title: cat,
-      data: items.filter((i) => i.category === cat),
-    })).filter((s) => s.data.length > 0);
-  }, [items]);
-
-  const filteredSections = useMemo(() => {
-    let result = sections;
-    if (selectedCat) {
-      result = result.filter((s) => s.title === selectedCat);
-    }
-    if (normalizedQuery) {
-      result = result
-        .map((s) => ({
-          ...s,
-          data: s.data.filter((i) => i.name.toLowerCase().includes(normalizedQuery)),
-        }))
-        .filter((s) => s.data.length > 0);
-    }
-    return result;
-  }, [sections, selectedCat, normalizedQuery]);
+  const filteredSections = useMemo(
+    () => fridgeSections(items, selectedCat, searchQuery),
+    [items, selectedCat, searchQuery],
+  );
 
   const catTabItems = useMemo(() => {
     const counts = new Map<string, number>();
@@ -91,27 +73,22 @@ export default function FridgeScreen() {
   };
 
   const handleDelete = (id: string, name: string) => {
-    showConfirm("Eliminar alimento", `¿Estás seguro de eliminar "${name}"?`, () => deleteItem(id), "Eliminar");
+    showConfirm("Eliminar alimento", `¿Estás seguro de eliminar "${name}"?`, () => {
+      deleteItem(id).catch(() => showAlert("Error", "No se pudo eliminar. Intenta de nuevo."));
+    }, "Eliminar");
   };
 
   const handleExportJSON = async () => {
     if (items.length === 0) {
-      Alert.alert("Sin datos", "No hay alimentos para exportar");
+      showAlert("Sin datos", "No hay alimentos para exportar");
       return;
     }
 
-    const summary = items
-      .filter((item) => item.status !== "empty")
-      .map((item) => ({
-        nombre: item.name,
-        fecha_compra: item.purchase_date,
-      }));
-
-    const json = JSON.stringify(summary, null, 2);
+    const json = buildFridgeExport(items);
 
     if (Platform.OS === "web") {
       await Clipboard.setStringAsync(json);
-      Alert.alert("Copiado", "El JSON fue copiado al portapapeles");
+      showAlert("Copiado", "El JSON fue copiado al portapapeles");
     } else {
       try {
         await Share.share({
@@ -120,7 +97,7 @@ export default function FridgeScreen() {
         });
       } catch (error) {
         await Clipboard.setStringAsync(json);
-        Alert.alert("Copiado", "El JSON fue copiado al portapapeles");
+        showAlert("Copiado", "El JSON fue copiado al portapapeles");
       }
     }
   };
@@ -140,9 +117,9 @@ export default function FridgeScreen() {
           {item.quantity} {item.unit}
           {item.archived ? " · Archivado" : ""}
         </Text>
-        {item.avg_days_per_unit != null && item.status !== "empty" && (
+        {daysLeft(item) != null && item.status !== "empty" && (
           <Text style={[styles.itemEstimate, { color: colors.textSecondary }]}>
-            ~{Math.round(item.avg_days_per_unit * item.quantity)} días
+            ~{daysLeft(item)} días
           </Text>
         )}
       </View>

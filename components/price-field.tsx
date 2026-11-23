@@ -4,13 +4,9 @@ import { neuInset } from "@/lib/neumorphic";
 import { StyleSheet, Text, View } from "react-native";
 import CurrencyInput from "react-native-currency-input";
 
-export type PriceMode = "unit" | "total";
+import { lineTotal, PriceMode } from "@/utils/line-total";
 
-/** Total de la línea: lo que se guarda en fridge_items.price. */
-export function lineTotal(price: string, mode: PriceMode, qty: number | null): number | null {
-  if (!price) return null;
-  return mode === "unit" ? Number(price) * (qty ?? 0) : Number(price);
-}
+export { lineTotal, type PriceMode };
 
 interface Props {
   price: string;
