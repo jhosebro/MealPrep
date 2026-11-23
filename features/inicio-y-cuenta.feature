@@ -50,3 +50,10 @@ Característica: Inicio y cuenta
     Cuando toco "Eliminar cuenta" en Configuración
     Y cancelo la confirmación
     Entonces mi cuenta sigue activa
+
+  Escenario: La nevera se guarda en caché y se borra al cerrar sesión
+    Dado que tengo "Leche" en la nevera
+    Entonces la caché local guarda "Leche"
+    Cuando cierro sesión
+    Entonces la caché local está vacía
+    Y la nevera en pantalla está vacía

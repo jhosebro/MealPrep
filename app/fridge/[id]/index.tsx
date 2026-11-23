@@ -147,7 +147,7 @@ export default function EditItemScreen() {
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()}>
+        <TouchableOpacity onPress={() => router.back()} hitSlop={12} accessibilityRole="button" accessibilityLabel="Volver">
           <Text style={[styles.backButton, { color: colors.tint }]}>
             ‹ Volver
           </Text>
@@ -155,7 +155,7 @@ export default function EditItemScreen() {
         <Text style={[styles.title, { color: colors.text }]}>
           Editar alimento
         </Text>
-        <TouchableOpacity onPress={handleDelete}>
+        <TouchableOpacity onPress={handleDelete} hitSlop={12} accessibilityRole="button" accessibilityLabel="Eliminar alimento">
           <Text style={{ color: colors.danger, fontSize: 16 }}>Eliminar</Text>
         </TouchableOpacity>
       </View>
@@ -378,6 +378,9 @@ const styles = StyleSheet.create({
   formContent: {
     padding: 16,
     paddingBottom: 100,
+    width: "100%",
+    maxWidth: 720,
+    alignSelf: "center",
   },
   field: {
     marginBottom: 20,

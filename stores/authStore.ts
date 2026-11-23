@@ -1,6 +1,9 @@
 import { supabase } from "@/services/supabase";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { create } from "zustand";
+import { useBudgetStore } from "./budgetStore";
+import { useFridgeStore } from "./fridgeStore";
+import { useRecipesStore } from "./recipesStore";
 
 const SESSION_KEY = "app_session"; // legado: ya no se escribe
 
@@ -14,6 +17,16 @@ interface AuthState {
   initialize: () => Promise<void>;
   setUser: (user: { id: string; email?: string } | null) => void;
   clearSession: () => Promise<void>;
+}
+
+/** Borra la caché de datos del usuario para que la siguiente cuenta no la vea (reset antes de borrar: setState vuelve a escribir). */
+function clearDataCache() {
+  useFridgeStore.setState(useFridgeStore.getInitialState(), true);
+  useFridgeStore.persist.clearStorage();
+  useRecipesStore.setState(useRecipesStore.getInitialState(), true);
+  useRecipesStore.persist.clearStorage();
+  useBudgetStore.setState(useBudgetStore.getInitialState(), true);
+  useBudgetStore.persist.clearStorage();
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
@@ -87,6 +100,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   signOut: async () => {
     await supabase.auth.signOut();
     await AsyncStorage.removeItem(SESSION_KEY);
+    clearDataCache();
     set({ user: null });
   },
 
@@ -96,6 +110,7 @@ export const useAuthStore = create<AuthState>((set) => ({
 
   clearSession: async () => {
     await AsyncStorage.removeItem(SESSION_KEY);
+    clearDataCache();
     set({ user: null });
   },
 }));

@@ -1,3 +1,5 @@
+import { persist } from 'zustand/middleware';
+import { cacheStorage } from '@/lib/cache';
 import { create } from 'zustand';
 import { formatLocalDate } from '@/utils/date';
 import { Status } from '@/types';
@@ -16,7 +18,7 @@ interface BudgetState {
   finishShopping: (sessionId: string) => Promise<void>;
 }
 
-export const useBudgetStore = create<BudgetState>((set, get) => ({
+export const useBudgetStore = create<BudgetState>()(persist((set, get) => ({
   session: null,
   purchases: [],
   loading: false,
@@ -102,4 +104,8 @@ export const useBudgetStore = create<BudgetState>((set, get) => ({
       throw error;
     }
   },
+}), {
+  name: "cache:budget",
+  storage: cacheStorage,
+  partialize: (s) => ({ session: s.session, purchases: s.purchases }),
 }));

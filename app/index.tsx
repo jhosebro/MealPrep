@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { ActivityIndicator, Text, TouchableOpacity, View } from "react-native";
 import { useRouter } from "expo-router";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { ONBOARDING_KEY } from "@/lib/cache";
 import { useAuthStore } from "@/stores/authStore";
 import { biometricService } from "@/services/biometricService";
 import { BrandMark } from "@/components/brand-logo";
@@ -42,7 +44,10 @@ export default function Index() {
       };
       checkBiometric();
     } else {
-      router.replace("/login" as any);
+      // El flag se lee antes de decidir la ruta, para no mostrar el login un instante en el primer arranque.
+      AsyncStorage.getItem(ONBOARDING_KEY).then((done) =>
+        router.replace((done ? "/login" : "/onboarding") as any)
+      );
     }
   }, [ready, user]);
 

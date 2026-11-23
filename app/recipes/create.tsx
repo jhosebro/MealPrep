@@ -284,6 +284,9 @@ const styles = StyleSheet.create({
   contentContainer: {
     padding: 16,
     paddingBottom: 100,
+    width: '100%',
+    maxWidth: 720,
+    alignSelf: 'center',
   },
   modeToggle: {
     flexDirection: 'row',

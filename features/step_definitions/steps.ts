@@ -4,6 +4,8 @@ import { Given, Then, When } from '@cucumber/cucumber';
 import { budget, fridge, recipes, STATUS, U, World } from '../support/world';
 import { db } from '../support/fake-supabase';
 import { FridgeItem } from '@/types';
+import { useAuthStore } from '@/stores/authStore';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { loginFormError, translateAuthError } from '@/utils/auth-errors';
 import { computeShoppingTotal } from '@/utils/compute-shopping-total';
 import { formatLocalDate } from '@/utils/date';
@@ -497,3 +499,12 @@ When(/^toco "([^"]*)"$/, async function (this: World, b: string) {
     default: throw new Error(`Botón sin implementar: ${b}`);
   }
 });
+
+// --- Caché local ---
+const cachedFridge = async () => JSON.parse((await AsyncStorage.getItem('cache:fridge')) ?? 'null');
+Then('la caché local guarda {string}', async (n: string) => {
+  assert.deepEqual((await cachedFridge())?.state.items.map((i: FridgeItem) => i.name), [n]);
+});
+When('cierro sesión', async () => { await useAuthStore.getState().signOut(); });
+Then('la caché local está vacía', async () => { assert.equal(await cachedFridge(), null); });
+Then('la nevera en pantalla está vacía', () => { assert.deepEqual(fridge().items, []); });

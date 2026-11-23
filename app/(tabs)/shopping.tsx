@@ -7,6 +7,8 @@ import { BudgetPurchase } from "@/services/budgetService";
 import { useAuthStore } from "@/stores/authStore";
 import { useBudgetStore } from "@/stores/budgetStore";
 import { useFridgeStore } from "@/stores/fridgeStore";
+import { SkeletonList } from "@/components/skeleton";
+import { ClayButton } from "@/components/clay";
 import { CATEGORIES, FridgeItem, Status, STORES } from "@/types";
 import { computeShoppingTotal } from "@/utils/compute-shopping-total";
 import { formatLocalDate } from "@/utils/date";
@@ -40,7 +42,7 @@ export default function ShoppingScreen() {
   const scheme = (colorScheme === "dark" ? "dark" : "light") as "light" | "dark";
   const colors = Colors[scheme];
   const { user } = useAuthStore();
-  const { items, fetchItems, updateItem } = useFridgeStore();
+  const { items, fetchItems, updateItem, loading: fridgeLoading, error: fridgeError } = useFridgeStore();
   const {
     session,
     purchases,
@@ -383,7 +385,16 @@ export default function ShoppingScreen() {
     );
   };
 
-  const renderEmpty = () => (
+  const renderEmpty = () => fridgeLoading && items.length === 0 ? <SkeletonList /> : fridgeError && items.length === 0 ? (
+    <View style={styles.emptyContainer}>
+      <Text accessibilityRole="alert" style={[styles.emptyText, { color: colors.danger }]}>
+        No se pudo cargar tu lista
+      </Text>
+      <ClayButton onPress={() => user && fetchItems(user.id)} style={{ marginTop: 12 }}>
+        Reintentar
+      </ClayButton>
+    </View>
+  ) : (
     <View style={styles.emptyContainer}>
       <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
         {showArchived
@@ -618,7 +629,7 @@ export default function ShoppingScreen() {
             <Text style={[styles.budgetLabel, { color: colors.text }]}>
               <Ionicons name="wallet-outline" size={16} />{" "}${session.amount.toLocaleString()}
             </Text>
-            <TouchableOpacity onPress={handleFinish} disabled={loading}>
+            <TouchableOpacity onPress={handleFinish} disabled={loading} hitSlop={12} accessibilityRole="button" accessibilityLabel="Finalizar compra">
               <Text style={[styles.finishText, { color: colors.primary }]}>
                 Finalizar
               </Text>

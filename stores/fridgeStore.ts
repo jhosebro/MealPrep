@@ -1,3 +1,5 @@
+import { persist } from 'zustand/middleware';
+import { cacheStorage } from '@/lib/cache';
 import { create } from 'zustand';
 import { FridgeItem } from '@/types';
 import { fridgeService } from '@/services/fridgeService';
@@ -13,7 +15,7 @@ interface FridgeState {
   getIngredientNames: () => string[];
 }
 
-export const useFridgeStore = create<FridgeState>((set, get) => ({
+export const useFridgeStore = create<FridgeState>()(persist((set, get) => ({
   items: [],
   loading: false,
   error: null,
@@ -73,4 +75,8 @@ export const useFridgeStore = create<FridgeState>((set, get) => ({
   getIngredientNames: () => {
     return get().items.map((item) => item.name);
   },
+}), {
+  name: "cache:fridge",
+  storage: cacheStorage,
+  partialize: (s) => ({ items: s.items }),
 }));

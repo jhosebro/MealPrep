@@ -1,5 +1,6 @@
 import { BrandMark } from '@/components/brand-logo';
 import { ClayButton, ClayCard } from '@/components/clay';
+import { SkeletonList } from '@/components/skeleton';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
@@ -15,10 +16,8 @@ import { useRouter } from 'expo-router';
 import { depletionLabel, isNearDepletion } from '@/utils/fridge';
 import { useEffect, useMemo, useState } from 'react';
 import {
-  Alert,
   FlatList,
   Modal,
-  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -36,7 +35,7 @@ export default function HomeScreen() {
   const colors = Colors[(colorScheme ?? 'light') as keyof typeof Colors];
   const scheme = (colorScheme ?? 'light') as 'light' | 'dark';
   const { user, signOut } = useAuthStore();
-  const { items, fetchItems } = useFridgeStore();
+  const { items, fetchItems, loading: fridgeLoading } = useFridgeStore();
   const { suggestRecipes, fetchSavedRecipes } = useRecipesStore();
   const [loading, setLoading] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
@@ -115,26 +114,10 @@ export default function HomeScreen() {
   };
 
   const handleSignOut = () => {
-    const doSignOut = async () => {
+    showConfirm('Cerrar sesión', '¿Estás seguro de cerrar sesión?', async () => {
       await signOut();
       router.replace('/login' as any);
-    };
-
-    if (Platform.OS === 'web') {
-      const confirmed = window.confirm('¿Estás seguro de cerrar sesión?');
-      if (confirmed) {
-        doSignOut();
-      }
-    } else {
-      Alert.alert('Cerrar sesión', '¿Estás seguro de cerrar sesión?', [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Cerrar sesión',
-          style: 'destructive',
-          onPress: doSignOut,
-        },
-      ]);
-    }
+    }, 'Cerrar sesión');
   };
 
   return (
@@ -260,6 +243,12 @@ export default function HomeScreen() {
           </ClayButton>
         )}
       </View>
+
+      {fridgeLoading && items.length === 0 && (
+        <View style={styles.section}>
+          <SkeletonList rows={3} rowHeight={56} />
+        </View>
+      )}
 
       {nearDepletion.length > 0 && (
         <View style={styles.section}>
