@@ -1,4 +1,7 @@
+import { persist } from 'zustand/middleware';
+import { cacheStorage } from '@/lib/cache';
 import { create } from 'zustand';
+import { formatLocalDate } from '@/utils/date';
 import { Status } from '@/types';
 import { budgetService, BudgetSession, BudgetPurchase } from '@/services/budgetService';
 import { fridgeService } from '@/services/fridgeService';
@@ -15,7 +18,7 @@ interface BudgetState {
   finishShopping: (sessionId: string) => Promise<void>;
 }
 
-export const useBudgetStore = create<BudgetState>((set, get) => ({
+export const useBudgetStore = create<BudgetState>()(persist((set, get) => ({
   session: null,
   purchases: [],
   loading: false,
@@ -49,7 +52,7 @@ export const useBudgetStore = create<BudgetState>((set, get) => ({
   markBought: async (sessionId, itemId, price, prevStatus) => {
     set({ loading: true, error: null });
     try {
-      const today = new Date().toISOString().split('T')[0];
+      const today = formatLocalDate(new Date());
       await fridgeService.update(itemId, { status: 'available', purchase_date: today });
 
       const { purchase, session } = await budgetService.addPurchase(
@@ -101,4 +104,8 @@ export const useBudgetStore = create<BudgetState>((set, get) => ({
       throw error;
     }
   },
+}), {
+  name: "cache:budget",
+  storage: cacheStorage,
+  partialize: (s) => ({ session: s.session, purchases: s.purchases }),
 }));

@@ -1,3 +1,5 @@
+import { persist } from 'zustand/middleware';
+import { cacheStorage } from '@/lib/cache';
 import { recipesService, SuggestedRecipe } from '@/services/recipesService';
 import { MealType, Recipe, SavedRecipe } from '@/types';
 import { create } from 'zustand';
@@ -22,7 +24,7 @@ interface RecipesState {
   getAIPromptUrl: (ingredients: string[]) => string;
 }
 
-export const useRecipesStore = create<RecipesState>((set, get) => ({
+export const useRecipesStore = create<RecipesState>()(persist((set, get) => ({
   suggestedRecipes: [],
   savedRecipes: [],
   loading: false,
@@ -131,4 +133,8 @@ export const useRecipesStore = create<RecipesState>((set, get) => ({
     const { mealTypeFilter } = get();
     return recipesService.buildAIPromptUrl(ingredients, mealTypeFilter);
   },
+}), {
+  name: "cache:recipes",
+  storage: cacheStorage,
+  partialize: (s) => ({ savedRecipes: s.savedRecipes }),
 }));

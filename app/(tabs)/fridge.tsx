@@ -1,17 +1,18 @@
 import { Colors } from "@/constants/theme";
 import { Ionicons } from "@expo/vector-icons";
-import { ClayChip } from "@/components/clay";
-import { showConfirm } from "@/lib/confirm";
+import { ClayButton, ClayChip } from "@/components/clay";
+import { SkeletonList } from "@/components/skeleton";
+import { showAlert, showConfirm } from "@/lib/confirm";
 import { neuInset, neuSurface } from "@/lib/neumorphic";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useAuthStore } from "@/stores/authStore";
 import { useFridgeStore } from "@/stores/fridgeStore";
 import { CATEGORIES, FridgeItem, Status } from "@/types";
+import { buildFridgeExport, daysLeft, fridgeSections } from "@/utils/fridge";
 import * as Clipboard from "expo-clipboard";
 import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
 import {
-  Alert,
   Platform,
   RefreshControl,
   ScrollView,
@@ -21,9 +22,15 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  View
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+
+const STATUS_LABEL: Record<Status, string> = {
+  available: "disponible",
+  low: "por agotarse",
+  empty: "agotado",
+};
 
 export default function FridgeScreen() {
   const router = useRouter();
@@ -31,7 +38,7 @@ export default function FridgeScreen() {
   const scheme = (colorScheme ?? "light") as "light" | "dark";
   const colors = Colors[scheme];
   const { user } = useAuthStore();
-  const { items, fetchItems, deleteItem } = useFridgeStore();
+  const { items, fetchItems, deleteItem, loading, error } = useFridgeStore();
   const [refreshing, setRefreshing] = useState(false);
   const [selectedCat, setSelectedCat] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -42,30 +49,15 @@ export default function FridgeScreen() {
     empty: colors.danger,
   };
 
-  const normalizedQuery = useMemo(() => searchQuery.trim().toLowerCase(), [searchQuery]);
+  const normalizedQuery = useMemo(
+    () => searchQuery.trim().toLowerCase(),
+    [searchQuery],
+  );
 
-  const sections = useMemo(() => {
-    return CATEGORIES.map((cat) => ({
-      title: cat,
-      data: items.filter((i) => i.category === cat),
-    })).filter((s) => s.data.length > 0);
-  }, [items]);
-
-  const filteredSections = useMemo(() => {
-    let result = sections;
-    if (selectedCat) {
-      result = result.filter((s) => s.title === selectedCat);
-    }
-    if (normalizedQuery) {
-      result = result
-        .map((s) => ({
-          ...s,
-          data: s.data.filter((i) => i.name.toLowerCase().includes(normalizedQuery)),
-        }))
-        .filter((s) => s.data.length > 0);
-    }
-    return result;
-  }, [sections, selectedCat, normalizedQuery]);
+  const filteredSections = useMemo(
+    () => fridgeSections(items, selectedCat, searchQuery),
+    [items, selectedCat, searchQuery],
+  );
 
   const catTabItems = useMemo(() => {
     const counts = new Map<string, number>();
@@ -91,27 +83,29 @@ export default function FridgeScreen() {
   };
 
   const handleDelete = (id: string, name: string) => {
-    showConfirm("Eliminar alimento", `¿Estás seguro de eliminar "${name}"?`, () => deleteItem(id), "Eliminar");
+    showConfirm(
+      "Eliminar alimento",
+      `¿Estás seguro de eliminar "${name}"?`,
+      () => {
+        deleteItem(id).catch(() =>
+          showAlert("Error", "No se pudo eliminar. Intenta de nuevo."),
+        );
+      },
+      "Eliminar",
+    );
   };
 
   const handleExportJSON = async () => {
     if (items.length === 0) {
-      Alert.alert("Sin datos", "No hay alimentos para exportar");
+      showAlert("Sin datos", "No hay alimentos para exportar");
       return;
     }
 
-    const summary = items
-      .filter((item) => item.status !== "empty")
-      .map((item) => ({
-        nombre: item.name,
-        fecha_compra: item.purchase_date,
-      }));
-
-    const json = JSON.stringify(summary, null, 2);
+    const json = buildFridgeExport(items);
 
     if (Platform.OS === "web") {
       await Clipboard.setStringAsync(json);
-      Alert.alert("Copiado", "El JSON fue copiado al portapapeles");
+      showAlert("Copiado", "El JSON fue copiado al portapapeles");
     } else {
       try {
         await Share.share({
@@ -120,46 +114,86 @@ export default function FridgeScreen() {
         });
       } catch (error) {
         await Clipboard.setStringAsync(json);
-        Alert.alert("Copiado", "El JSON fue copiado al portapapeles");
+        showAlert("Copiado", "El JSON fue copiado al portapapeles");
       }
     }
   };
 
   const renderItem = ({ item }: { item: FridgeItem }) => (
-    <TouchableOpacity
-      style={[styles.itemCard, neuSurface(scheme, "raised")]}
-      onPress={() => router.push(`/fridge/${item.id}` as any)}
-      onLongPress={() => handleDelete(item.id, item.name)}
-    >
-      <View style={[styles.statusDot, { backgroundColor: statusColor[item.status] }]} />
-      <View style={styles.itemContent}>
-        <Text style={[styles.itemName, { color: colors.text }]}>
-          {item.name}
-        </Text>
-        <Text style={[styles.itemDetails, { color: colors.textSecondary }]}>
-          {item.quantity} {item.unit}
-          {item.archived ? " · Archivado" : ""}
-        </Text>
-        {item.avg_days_per_unit != null && item.status !== "empty" && (
-          <Text style={[styles.itemEstimate, { color: colors.textSecondary }]}>
-            ~{Math.round(item.avg_days_per_unit * item.quantity)} días
+    // Hermanos (no anidados): en web un <button> no puede contener otro.
+    <View style={[styles.itemCard, neuSurface(scheme, "raised")]}>
+      <TouchableOpacity
+        style={styles.itemMain}
+        onPress={() => router.push(`/fridge/${item.id}` as any)}
+        onLongPress={() => handleDelete(item.id, item.name)}
+        accessibilityRole="button"
+        accessibilityLabel={`${item.name}, ${item.quantity} ${item.unit}, ${STATUS_LABEL[item.status]}`}
+        accessibilityHint="Abre el detalle para editar"
+      >
+        <View
+          style={[
+            styles.statusDot,
+            { backgroundColor: statusColor[item.status] },
+          ]}
+        />
+        <View style={styles.itemContent}>
+          <Text style={[styles.itemName, { color: colors.text }]}>
+            {item.name}
           </Text>
-        )}
-      </View>
-      <Text style={[styles.chevron, { color: colors.textSecondary }]}>›</Text>
-    </TouchableOpacity>
-  );
-
-  const renderEmpty = () => (
-    <View style={styles.emptyContainer}>
-      <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
-        Tu nevera está vacía
-      </Text>
-      <Text style={[styles.emptySubtext, { color: colors.textSecondary }]}>
-        Toca + para agregar ingredientes
-      </Text>
+          <Text style={[styles.itemDetails, { color: colors.textSecondary }]}>
+            {item.quantity} {item.unit}
+            {item.archived ? " · Archivado" : ""}
+          </Text>
+          {daysLeft(item) != null && item.status !== "empty" && (
+            <Text
+              style={[styles.itemEstimate, { color: colors.textSecondary }]}
+            >
+              ~{daysLeft(item)} días
+            </Text>
+          )}
+        </View>
+        <Text style={[styles.chevron, { color: colors.textSecondary }]}>›</Text>
+      </TouchableOpacity>
+      <TouchableOpacity
+        onPress={() => handleDelete(item.id, item.name)}
+        hitSlop={12}
+        accessibilityRole="button"
+        accessibilityLabel={`Eliminar ${item.name}`}
+        style={{ padding: 4 }}
+      >
+        <Ionicons name="trash-outline" size={18} color={colors.textSecondary} />
+      </TouchableOpacity>
     </View>
   );
+
+  const renderEmpty = () =>
+    loading ? (
+      <SkeletonList />
+    ) : error ? (
+      <View style={styles.emptyContainer}>
+        <Text
+          accessibilityRole="alert"
+          style={[styles.emptyText, { color: colors.danger }]}
+        >
+          No se pudo cargar tu nevera
+        </Text>
+        <ClayButton
+          onPress={() => user && fetchItems(user.id)}
+          style={{ marginTop: 12 }}
+        >
+          Reintentar
+        </ClayButton>
+      </View>
+    ) : (
+      <View style={styles.emptyContainer}>
+        <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
+          Tu nevera está vacía
+        </Text>
+        <Text style={[styles.emptySubtext, { color: colors.textSecondary }]}>
+          Toca + para agregar ingredientes
+        </Text>
+      </View>
+    );
 
   const headerComponent = (
     <>
@@ -167,8 +201,17 @@ export default function FridgeScreen() {
         <Text style={[styles.title, { color: colors.text }]}>Mi Despensa</Text>
         <View style={styles.headerActions}>
           <View style={[styles.exportButton, neuSurface(scheme, "raised")]}>
-            <TouchableOpacity onPress={handleExportJSON}>
-              <Text style={[styles.exportButtonText, { color: colors.primaryDark }]}><Ionicons name="share-outline" size={16} />{" "}Exportar</Text>
+            <TouchableOpacity
+              onPress={handleExportJSON}
+              hitSlop={12}
+              accessibilityRole="button"
+              accessibilityLabel="Exportar nevera"
+            >
+              <Text
+                style={[styles.exportButtonText, { color: colors.primaryDark }]}
+              >
+                <Ionicons name="share-outline" size={16} /> Exportar
+              </Text>
             </TouchableOpacity>
           </View>
           <View
@@ -204,8 +247,15 @@ export default function FridgeScreen() {
           <TouchableOpacity
             style={styles.clearButton}
             onPress={() => setSearchQuery("")}
+            hitSlop={12}
+            accessibilityRole="button"
+            accessibilityLabel="Limpiar búsqueda"
           >
-            <Ionicons name="close-circle" size={18} color={colors.textSecondary} />
+            <Ionicons
+              name="close-circle"
+              size={18}
+              color={colors.textSecondary}
+            />
           </TouchableOpacity>
         )}
       </View>
@@ -244,7 +294,32 @@ export default function FridgeScreen() {
               ? `No se encontró "${searchQuery.trim()}"`
               : "No hay items en esta categoría"}
           </Text>
+          <TouchableOpacity
+            onPress={() => {
+              setSearchQuery("");
+              setSelectedCat(null);
+            }}
+            accessibilityRole="button"
+            style={{ padding: 12 }}
+          >
+            <Text style={{ color: colors.primaryDark, fontWeight: "600" }}>
+              Limpiar filtros
+            </Text>
+          </TouchableOpacity>
         </View>
+      )}
+
+      {error && items.length > 0 && (
+        <TouchableOpacity
+          onPress={() => user && fetchItems(user.id)}
+          accessibilityRole="button"
+          style={{ paddingVertical: 10, alignItems: "center" }}
+        >
+          <Text style={{ color: colors.danger }}>
+            No se pudo actualizar: mostrando datos guardados. Toca para
+            reintentar.
+          </Text>
+        </TouchableOpacity>
       )}
     </>
   );
@@ -260,7 +335,9 @@ export default function FridgeScreen() {
             <Text style={[styles.sectionTitle, { color: colors.text }]}>
               {section.title.toUpperCase()}
             </Text>
-            <Text style={[styles.sectionCount, { color: colors.textSecondary }]}>
+            <Text
+              style={[styles.sectionCount, { color: colors.textSecondary }]}
+            >
               {section.data.length}
             </Text>
           </View>
@@ -357,7 +434,9 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     marginBottom: 8,
     marginHorizontal: 16,
+    gap: 8,
   },
+  itemMain: { flex: 1, flexDirection: "row", alignItems: "center" },
   statusDot: {
     width: 12,
     height: 12,

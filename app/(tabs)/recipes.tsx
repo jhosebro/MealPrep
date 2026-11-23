@@ -1,8 +1,10 @@
+import { SkeletonList } from '@/components/skeleton';
 import { ClayCard, ClayButton, ClayChip } from '@/components/clay';
 import { Colors, MealTypeColors, MealTypeDefault } from '@/constants/theme';
 import { Ionicons } from '@expo/vector-icons';
 
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { showAlert } from '@/lib/confirm';
 import { neuSurface, neuInset } from '@/lib/neumorphic';
 import { recipesService } from '@/services/recipesService';
 import { useAuthStore } from '@/stores/authStore';
@@ -13,7 +15,6 @@ import * as Clipboard from 'expo-clipboard';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import {
-  ActivityIndicator,
   FlatList,
   Linking,
   Modal,
@@ -25,14 +26,6 @@ import {
   View,
 } from 'react-native';
 
-const showAlert = (title: string, message: string) => {
-  if (Platform.OS === 'web') {
-    window.alert(`${title}\n${message}`);
-  } else {
-    const { Alert } = require('react-native');
-    Alert.alert(title, message);
-  }
-};
 
 export default function RecipesScreen() {
   const router = useRouter();
@@ -513,6 +506,16 @@ export default function RecipesScreen() {
       renderItem={renderSavedCard}
       contentContainerStyle={styles.list}
       ListEmptyComponent={
+        error ? (
+          <View style={styles.emptyContainer}>
+            <Text accessibilityRole="alert" style={[styles.emptyTitle, { color: colors.danger }]}>
+              No se pudieron cargar tus recetas
+            </Text>
+            <ClayButton onPress={() => user && fetchSavedRecipes(user.id)} style={{ marginTop: 12 }}>
+              Reintentar
+            </ClayButton>
+          </View>
+        ) : (
         <View style={styles.emptyContainer}>
           <Ionicons name="book-outline" size={56} color={colors.primary} style={styles.emptyIcon} />
           <Text style={[styles.emptyTitle, { color: colors.text }]}>
@@ -524,6 +527,7 @@ export default function RecipesScreen() {
               : 'Crea tu primera receta tocando el botón +.'}
           </Text>
         </View>
+        )
       }
     />
   );
@@ -536,10 +540,12 @@ export default function RecipesScreen() {
 
       {renderMealTypeFilters()}
 
-      <View style={styles.tabContainer}>
+      <View style={styles.tabContainer} accessibilityRole="tablist">
         <TouchableOpacity
           style={[styles.tab, activeTab === 'suggestions' && { borderBottomColor: colors.primary }]}
           onPress={() => setActiveTab('suggestions')}
+          accessibilityRole="tab"
+          accessibilityState={{ selected: activeTab === 'suggestions' }}
         >
           <Text style={[styles.tabText, { color: colors.text }, activeTab === 'suggestions' && styles.tabTextActive]}>
             Sugerencias
@@ -548,6 +554,8 @@ export default function RecipesScreen() {
         <TouchableOpacity
           style={[styles.tab, activeTab === 'all' && { borderBottomColor: colors.primary }]}
           onPress={() => setActiveTab('all')}
+          accessibilityRole="tab"
+          accessibilityState={{ selected: activeTab === 'all' }}
         >
           <Text style={[styles.tabText, { color: colors.text }, activeTab === 'all' && styles.tabTextActive]}>
             Guardadas ({savedRecipes.length})
@@ -556,8 +564,8 @@ export default function RecipesScreen() {
       </View>
 
       {loading && savedRecipes.length === 0 ? (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={colors.primary} />
+        <View style={{ padding: 16 }}>
+          <SkeletonList rows={4} rowHeight={96} />
         </View>
       ) : activeTab === 'suggestions' ? (
         renderSuggestionsTab()
@@ -570,6 +578,8 @@ export default function RecipesScreen() {
         style={[styles.fab, neuSurface(scheme, 'raised'), { backgroundColor: colors.primary }]}
         onPress={navigateToCreate}
         activeOpacity={0.8}
+        accessibilityRole="button"
+        accessibilityLabel="Crear receta"
       >
         <Text style={styles.fabText}>+</Text>
       </TouchableOpacity>
@@ -740,11 +750,6 @@ const styles = StyleSheet.create({
     fontSize: 15,
     textAlign: 'center',
     lineHeight: 22,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
   },
   fab: {
     position: 'absolute',

@@ -19,6 +19,8 @@ import {
     View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { formatLocalDate } from "@/utils/date";
+import { isValidQuantity, itemFormError } from "@/utils/fridge";
 
 export default function AddItemScreen() {
   const router = useRouter();
@@ -45,24 +47,16 @@ export default function AddItemScreen() {
   const [showCustomStore, setShowCustomStore] = useState(false);
   const [status, setStatus] = useState<Status>("available");
 
-  const formatDate = (date: Date | null) => {
-    if (!date) return "";
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, "0");
-    const day = String(date.getDate()).padStart(2, "0");
-    return `${year}-${month}-${day}`;
-  };
-
   const qty = Number(quantity);
-  const qtyValid = quantity.trim() !== "" && Number.isInteger(qty) && qty >= 0;
+  const qtyValid = isValidQuantity(quantity);
   // price en BD es el total de la línea (lo suma computeShoppingTotal)
   const totalPrice = lineTotal(price, priceMode, qtyValid ? qty : null);
 
   const handleSave = async () => {
     setError("");
-    if (!name.trim()) return setError("El nombre es requerido");
+    const formError = itemFormError(name, quantity);
+    if (formError) return setError(formError);
     if (!user) return setError("Debes iniciar sesión");
-    if (!qtyValid) return setError("La cantidad debe ser un número entero (0 o más)");
 
     const finalStatus = qty === 0 ? "empty" : status;
 
@@ -73,11 +67,11 @@ export default function AddItemScreen() {
         unit,
         category,
         price: totalPrice,
-        purchase_date: formatDate(purchaseDate) || null,
+        purchase_date: formatLocalDate(purchaseDate) || null,
         store_name: showCustomStore
           ? storeName.trim() || null
           : storeName || null,
-        expiry_date: formatDate(expiryDate) || null,
+        expiry_date: formatLocalDate(expiryDate) || null,
         status: finalStatus,
         avg_days_per_unit: null,
         total_consumed: 0,
@@ -319,6 +313,9 @@ const styles = StyleSheet.create({
   formContent: {
     padding: 16,
     paddingBottom: 100,
+    width: "100%",
+    maxWidth: 720,
+    alignSelf: "center",
   },
   field: {
     marginBottom: 20,

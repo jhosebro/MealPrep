@@ -33,6 +33,13 @@ export function DateField({
   clearLabel = "Eliminar fecha",
 }: DateFieldProps) {
   const [showPicker, setShowPicker] = useState(false);
+  // En iOS el spinner cambia el valor en vivo; guardamos el original para que Cancelar lo restaure
+  const [originalValue, setOriginalValue] = useState<Date | null>(null);
+
+  const openPicker = () => {
+    setOriginalValue(value);
+    setShowPicker(true);
+  };
   const scheme = useColorScheme() ?? "light";
 
   const formatDisplay = (date: Date) => {
@@ -103,7 +110,7 @@ export function DateField({
     <View>
       <TouchableOpacity
         style={[styles.input, neuInset(scheme)]}
-        onPress={() => setShowPicker(true)}
+        onPress={openPicker}
       >
         <Text style={{ color: value ? colors.text : colors.textSecondary }}>
           {value ? formatDisplay(value) : placeholder}
@@ -113,7 +120,12 @@ export function DateField({
         <View>
           {Platform.OS === "ios" && (
             <View style={styles.pickerButtons}>
-              <TouchableOpacity onPress={() => setShowPicker(false)}>
+              <TouchableOpacity
+                onPress={() => {
+                  onChange(originalValue);
+                  setShowPicker(false);
+                }}
+              >
                 <Text style={{ color: colors.tint, fontSize: 16 }}>
                   Cancelar
                 </Text>

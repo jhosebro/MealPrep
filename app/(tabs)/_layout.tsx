@@ -31,15 +31,7 @@ export default function TabLayout() {
     }
   }, [initialized, user]);
 
-  if (!initialized) {
-    return (
-      <View style={[styles.loading, { backgroundColor: colors.background }]}>
-        <ActivityIndicator size="large" color={colors.primary} />
-      </View>
-    );
-  }
-
-  if (!user) {
+  if (!initialized || !user) {
     return (
       <View style={[styles.loading, { backgroundColor: colors.background }]}>
         <ActivityIndicator size="large" color={colors.primary} />

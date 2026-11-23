@@ -1,4 +1,4 @@
-import { showConfirm } from '@/lib/confirm';
+import { showAlert, showConfirm } from '@/lib/confirm';
 import { ClayButton } from '@/components/clay';
 import { Colors, MealTypeColors, MealTypeDefault } from '@/constants/theme';
 import { Ionicons } from '@expo/vector-icons';
@@ -8,16 +8,8 @@ import { neuSurface } from '@/lib/neumorphic';
 import { useAuthStore } from '@/stores/authStore';
 import { useRecipesStore } from '@/stores/recipesStore';
 import { useRouter } from 'expo-router';
-import { Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
-const showAlert = (title: string, message: string) => {
-  if (Platform.OS === 'web') {
-    window.alert(`${title}\n${message}`);
-  } else {
-    const { Alert } = require('react-native');
-    Alert.alert(title, message);
-  }
-};
 
 const formatDate = (dateStr: string): string => {
   const date = new Date(dateStr);
@@ -44,7 +36,8 @@ export default function RecipeDetailScreen() {
   const handleSave = async () => {
     if (!user || !selectedRecipe) return;
     await saveRecipe(user.id, selectedRecipe);
-    showAlert('Éxito', 'Receta guardada');
+    const err = useRecipesStore.getState().error;
+    showAlert(err ? 'Error' : 'Éxito', err ?? 'Receta guardada');
   };
 
   const handleMarkCooked = () => {
@@ -54,7 +47,8 @@ export default function RecipeDetailScreen() {
       'Se marcará como preparada y no se sugerirá en los próximos 7 días.',
       async () => {
         await markAsCooked(selectedRecipeSavedId);
-        showAlert('Listo', '¡Buen provecho!');
+        const err = useRecipesStore.getState().error;
+        showAlert(err ? 'Error' : 'Listo', err ?? '¡Buen provecho!');
       },
       'Sí, la preparé',
     );
@@ -67,6 +61,8 @@ export default function RecipeDetailScreen() {
       '¿Estás seguro de eliminar esta receta?',
       async () => {
         await deleteSavedRecipe(selectedRecipeSavedId);
+        const err = useRecipesStore.getState().error;
+        if (err) return showAlert('Error', err);
         router.back();
       },
       'Eliminar',
